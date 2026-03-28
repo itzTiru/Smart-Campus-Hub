@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: smart-campus-api
+
+  data:
+    mongodb:
+      uri: mongodb+srv://tishanyasiru:123456799Password@cluster0.pxbn96g.mongodb.net/smart_campus?retryWrites=true&w=majority&appName=Cluster0&tlsAllowInvalidCertificates=true
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 30MB
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:your-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:your-client-secret}
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+
+server:
+  port: 8080
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:SmartCampusSecretKeyThatIsAtLeast256BitsLongForHS256AlgorithmSecurity2026}
+    expiration-ms: 86400000
+  oauth2:
+    redirect-uri: http://localhost:5173/oauth2/redirect
+  file:
+    upload-dir: ./uploads
+    max-attachments-per-ticket: 3
+    allowed-types: image/jpeg,image/png,image/gif,image/webp
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+
+logging:
+  level:
+    com.smartcampus: DEBUG
+    org.springframework.security: DEBUG
