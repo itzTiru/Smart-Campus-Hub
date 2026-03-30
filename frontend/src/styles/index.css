@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/* Enable class-based dark mode for manual toggle */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+  }
+  .dark body,
+  body:where(.dark *) {
+    @apply bg-gray-900 text-gray-100;
+  }
+}
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600;
+  }
+  .btn-danger {
+    @apply bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium text-sm;
+  }
+  .btn-success {
+    @apply bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium text-sm;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700;
+  }
+
+  /* Inputs */
+  .input-field {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400;
+  }
+
+  /* Badge */
+  .badge {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  /* Dark mode: tables */
+  .dark table thead {
+    @apply bg-gray-800;
+  }
+  .dark table thead th {
+    @apply text-gray-400;
+  }
+  .dark table tbody tr {
+    @apply border-gray-700;
+  }
+  .dark table tbody tr:hover {
+    @apply bg-gray-800/50;
+  }
+  .dark table tbody td {
+    @apply text-gray-300;
+  }
+
+  /* Dark mode: common overrides */
+  .dark .border-gray-200 { border-color: #374151; }
+  .dark .bg-gray-50 { background-color: #111827; }
+  .dark .text-gray-900 { color: #f3f4f6; }
+  .dark .text-gray-700 { color: #d1d5db; }
+  .dark .text-gray-600 { color: #9ca3af; }
+  .dark .text-gray-500 { color: #9ca3af; }
+  .dark .bg-white { background-color: #1f2937; }
+  .dark .hover\:bg-gray-50:hover { background-color: #1f2937; }
+
+  /* Dark mode: inputs/selects inline */
+  .dark input, .dark select, .dark textarea {
+    @apply bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-400;
+  }
+  .dark input:focus, .dark select:focus, .dark textarea:focus {
+    @apply border-blue-500;
+  }
+
+  /* Dark mode: modals */
+  .dark .bg-black\/40 { background-color: rgba(0,0,0,0.6); }
+
+  /* Dark mode: notification panel */
+  .dark .bg-blue-50 { background-color: rgba(59,130,246,0.1); }
+
+  /* Dark mode: filter bar */
+  .dark .bg-gray-50.border-gray-200 {
+    background-color: #1f2937;
+    border-color: #374151;
+  }
+}
