@@ -21,8 +21,10 @@ import { TICKET_STATUS, TICKET_CATEGORIES, PRIORITY } from '../utils/constants';
 const TechnicianDashboardPage = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('technician_token');
-  const raw = localStorage.getItem('technician_user');
-  const technician = raw ? JSON.parse(raw) : null;
+  const [technician, setTechnician] = useState(() => {
+    const raw = localStorage.getItem('technician_user');
+    return raw ? JSON.parse(raw) : null;
+  });
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
@@ -57,19 +59,26 @@ const TechnicianDashboardPage = () => {
       const data = response?.data || response;
       setTickets(data?.content || []);
 
-      const nextUser = {
-        ...technician,
-        currentActiveJobs: (data?.content || []).filter(
-          (t) => ['ASSIGNED', 'WORKING_ON', 'IN_PROGRESS'].includes(t.status)
-        ).length,
-      };
-      localStorage.setItem('technician_user', JSON.stringify(nextUser));
+      setTechnician((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        const nextUser = {
+          ...prev,
+          currentActiveJobs: (data?.content || []).filter(
+            (t) => ['ASSIGNED', 'WORKING_ON', 'IN_PROGRESS'].includes(t.status)
+          ).length,
+        };
+        localStorage.setItem('technician_user', JSON.stringify(nextUser));
+        return nextUser;
+      });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load assigned tickets');
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticatedTechnician, statusFilter, technician]);
+  }, [isAuthenticatedTechnician, statusFilter]);
 
   useEffect(() => {
     fetchTickets();
