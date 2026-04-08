@@ -8,13 +8,13 @@ import com.smartcampus.dto.response.UserResponse;
 import com.smartcampus.entity.Booking;
 import com.smartcampus.entity.Resource;
 import com.smartcampus.entity.User;
+import com.smartcampus.entity.enums.BookingStatus;
 import com.smartcampus.entity.enums.ResourceStatus;
 import com.smartcampus.entity.enums.ResourceType;
 import com.smartcampus.exception.BadRequestException;
 import com.smartcampus.exception.ResourceNotFoundException;
 import com.smartcampus.repository.BookingRepository;
 import com.smartcampus.repository.ResourceRepository;
-import com.smartcampus.repository.TicketRepository;
 import com.smartcampus.service.ResourceService;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
@@ -40,7 +40,6 @@ public class ResourceServiceImpl implements ResourceService {
 
     private final ResourceRepository resourceRepository;
     private final BookingRepository bookingRepository;
-    private final TicketRepository ticketRepository;
     private final MongoTemplate mongoTemplate;
 
     @Override
@@ -105,14 +104,14 @@ public class ResourceServiceImpl implements ResourceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Resource", "id", id));
 
         ObjectId resourceId = new ObjectId(id);
-        long bookingCount = bookingRepository.countByResourceId(resourceId);
-        long ticketCount = ticketRepository.countByResourceId(resourceId);
+        long approvedBookingCount = bookingRepository.countByResourceIdAndStatus(
+                resourceId, BookingStatus.APPROVED);
 
-        if (bookingCount > 0 || ticketCount > 0) {
+        if (approvedBookingCount > 0) {
             throw new BadRequestException(
-                    "Cannot delete resource because it is referenced by "
-                            + bookingCount + " booking(s) and "
-                            + ticketCount + " ticket(s)."
+                    "Cannot delete resource because it has "
+                            + approvedBookingCount
+                            + " approved booking(s). Please resolve those first."
             );
         }
 
@@ -125,6 +124,16 @@ public class ResourceServiceImpl implements ResourceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Resource", "id", id));
 
         if (resource.getStatus() == ResourceStatus.ACTIVE) {
+            ObjectId resourceId = new ObjectId(id);
+            long approvedBookingCount = bookingRepository.countByResourceIdAndStatus(
+                    resourceId, BookingStatus.APPROVED);
+            if (approvedBookingCount > 0) {
+                throw new BadRequestException(
+                        "Cannot deactivate resource because it has "
+                                + approvedBookingCount
+                                + " approved booking(s). Please resolve those first."
+                );
+            }
             resource.setStatus(ResourceStatus.OUT_OF_SERVICE);
         } else {
             resource.setStatus(ResourceStatus.ACTIVE);

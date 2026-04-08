@@ -25,6 +25,9 @@ public interface BookingRepository extends MongoRepository<Booking, String> {
     @Query(value = "{'resource': ?0}", count = true)
     long countByResourceId(ObjectId resourceId);
 
+    @Query(value = "{'resource': ?0, 'status': ?1}", count = true)
+    long countByResourceIdAndStatus(ObjectId resourceId, BookingStatus status);
+
     @Query("{'resource': ?0, 'status': {$in: ['PENDING', 'APPROVED']}, 'startTime': {$lt: ?2}, 'endTime': {$gt: ?1}}")
     List<Booking> findConflictingBookings(ObjectId resourceId, LocalDateTime startTime, LocalDateTime endTime);
 

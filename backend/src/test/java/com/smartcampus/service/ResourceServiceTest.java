@@ -3,13 +3,13 @@ package com.smartcampus.service;
 import com.smartcampus.dto.request.ResourceRequest;
 import com.smartcampus.dto.response.ResourceResponse;
 import com.smartcampus.entity.Resource;
+import com.smartcampus.entity.enums.BookingStatus;
 import com.smartcampus.entity.enums.ResourceStatus;
 import com.smartcampus.entity.enums.ResourceType;
 import com.smartcampus.exception.BadRequestException;
 import com.smartcampus.exception.ResourceNotFoundException;
 import com.smartcampus.repository.BookingRepository;
 import com.smartcampus.repository.ResourceRepository;
-import com.smartcampus.repository.TicketRepository;
 import com.smartcampus.service.impl.ResourceServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,7 +32,6 @@ class ResourceServiceTest {
 
     @Mock private ResourceRepository resourceRepository;
     @Mock private BookingRepository bookingRepository;
-    @Mock private TicketRepository ticketRepository;
     @Mock private MongoTemplate mongoTemplate;
 
     @InjectMocks
@@ -122,8 +121,7 @@ class ResourceServiceTest {
     @DisplayName("Should delete a resource")
     void deleteResource_Success() {
         when(resourceRepository.findById("507f1f77bcf86cd799439011")).thenReturn(Optional.of(sampleResource));
-        when(bookingRepository.countByResourceId(any())).thenReturn(0L);
-        when(ticketRepository.countByResourceId(any())).thenReturn(0L);
+        when(bookingRepository.countByResourceIdAndStatus(any(), eq(BookingStatus.APPROVED))).thenReturn(0L);
 
         resourceService.deleteResource("507f1f77bcf86cd799439011");
 
@@ -131,31 +129,26 @@ class ResourceServiceTest {
     }
 
     @Test
-    @DisplayName("Should block delete when resource has related bookings")
-    void deleteResource_WithBookings_ShouldThrowBadRequest() {
+    @DisplayName("Should block delete when resource has approved bookings")
+    void deleteResource_WithApprovedBookings_ShouldThrowBadRequest() {
         when(resourceRepository.findById("507f1f77bcf86cd799439011")).thenReturn(Optional.of(sampleResource));
-        when(bookingRepository.countByResourceId(any())).thenReturn(2L);
-        when(ticketRepository.countByResourceId(any())).thenReturn(0L);
+        when(bookingRepository.countByResourceIdAndStatus(any(), eq(BookingStatus.APPROVED))).thenReturn(2L);
 
         assertThatThrownBy(() -> resourceService.deleteResource("507f1f77bcf86cd799439011"))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Cannot delete resource because it is referenced");
+                .hasMessageContaining("approved booking");
 
         verify(resourceRepository, never()).delete(any(Resource.class));
     }
 
     @Test
-    @DisplayName("Should block delete when resource has related tickets")
-    void deleteResource_WithTickets_ShouldThrowBadRequest() {
+    @DisplayName("Should allow delete when there are no approved bookings")
+    void deleteResource_NoApprovedBookings_ShouldDelete() {
         when(resourceRepository.findById("507f1f77bcf86cd799439011")).thenReturn(Optional.of(sampleResource));
-        when(bookingRepository.countByResourceId(any())).thenReturn(0L);
-        when(ticketRepository.countByResourceId(any())).thenReturn(3L);
+        when(bookingRepository.countByResourceIdAndStatus(any(), eq(BookingStatus.APPROVED))).thenReturn(0L);
 
-        assertThatThrownBy(() -> resourceService.deleteResource("507f1f77bcf86cd799439011"))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Cannot delete resource because it is referenced");
-
-        verify(resourceRepository, never()).delete(any(Resource.class));
+        resourceService.deleteResource("507f1f77bcf86cd799439011");
+        verify(resourceRepository).delete(sampleResource);
     }
 
     @Test
@@ -172,11 +165,26 @@ class ResourceServiceTest {
     void toggleStatus_ActiveToOutOfService() {
         sampleResource.setStatus(ResourceStatus.ACTIVE);
         when(resourceRepository.findById("res1")).thenReturn(Optional.of(sampleResource));
+        when(bookingRepository.countByResourceIdAndStatus(any(), eq(BookingStatus.APPROVED))).thenReturn(0L);
         when(resourceRepository.save(any(Resource.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ResourceResponse response = resourceService.toggleResourceStatus("res1");
 
         assertThat(response.getStatus()).isEqualTo(ResourceStatus.OUT_OF_SERVICE);
+    }
+
+    @Test
+    @DisplayName("Should block deactivation when resource has approved bookings")
+    void toggleStatus_ActiveWithApprovedBookings_ShouldThrowBadRequest() {
+        sampleResource.setStatus(ResourceStatus.ACTIVE);
+        when(resourceRepository.findById("res1")).thenReturn(Optional.of(sampleResource));
+        when(bookingRepository.countByResourceIdAndStatus(any(), eq(BookingStatus.APPROVED))).thenReturn(1L);
+
+        assertThatThrownBy(() -> resourceService.toggleResourceStatus("res1"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("approved booking");
+
+        verify(resourceRepository, never()).save(any(Resource.class));
     }
 
     @Test

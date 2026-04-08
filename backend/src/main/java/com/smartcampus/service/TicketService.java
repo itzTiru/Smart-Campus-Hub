@@ -17,7 +17,7 @@ public interface TicketService {
 
     TicketResponse createTicket(TicketRequest request, List<MultipartFile> images, String userId);
 
-    PagedResponse<TicketResponse> getAllTickets(String reporterId, String assignedToId,
+    PagedResponse<TicketResponse> getAllTickets(String reporterId, String assignedToId, String resourceId,
                                                 TicketStatus status, Priority priority,
                                                 TicketCategory category, int page, int size);
 

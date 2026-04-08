@@ -5,6 +5,7 @@ export const getTickets = async (params) => {
     params: {
       reporterId: params.reporterId,
       assignedToId: params.assignedToId,
+      resourceId: params.resourceId,
       status: params.status,
       priority: params.priority,
       category: params.category,

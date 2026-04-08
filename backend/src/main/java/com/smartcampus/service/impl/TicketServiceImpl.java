@@ -94,7 +94,7 @@ public class TicketServiceImpl implements TicketService {
     }
 
     @Override
-    public PagedResponse<TicketResponse> getAllTickets(String reporterId, String assignedToId,
+    public PagedResponse<TicketResponse> getAllTickets(String reporterId, String assignedToId, String resourceId,
                                                        TicketStatus status, Priority priority,
                                                        TicketCategory category, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -102,6 +102,7 @@ public class TicketServiceImpl implements TicketService {
         Query query = new Query();
         if (reporterId != null) query.addCriteria(Criteria.where("reporter").is(new org.bson.types.ObjectId(reporterId)));
         if (assignedToId != null) query.addCriteria(Criteria.where("assignedTo").is(new org.bson.types.ObjectId(assignedToId)));
+        if (resourceId != null) query.addCriteria(Criteria.where("resource").is(new org.bson.types.ObjectId(resourceId)));
         if (status != null) query.addCriteria(Criteria.where("status").is(status));
         if (priority != null) query.addCriteria(Criteria.where("priority").is(priority));
         if (category != null) query.addCriteria(Criteria.where("category").is(category));

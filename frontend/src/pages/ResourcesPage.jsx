@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Filter, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Search, Filter, Trash2, ToggleLeft, ToggleRight, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { getResources, deleteResource, toggleResourceStatus, createResource, searchResources } from '../api/resourceApi';
+import { getBookings } from '../api/bookingApi';
+import { getTickets } from '../api/ticketApi';
 import { useAuthStore } from '../store/authStore';
 import { RESOURCE_TYPES, RESOURCE_STATUS } from '../utils/constants';
 
@@ -24,6 +26,28 @@ const ResourcesPage = () => {
     building: '', floor: '', description: '', availabilityStart: '08:00', availabilityEnd: '18:00',
   });
   const [creating, setCreating] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    resource: null,
+    loading: false,
+    deleting: false,
+    error: null,
+    bookings: [],
+    tickets: [],
+    bookingTotal: 0,
+    ticketTotal: 0,
+  });
+  const [toggleDialog, setToggleDialog] = useState({
+    open: false,
+    resource: null,
+    loading: false,
+    toggling: false,
+    error: null,
+    bookings: [],
+    bookingTotal: 0,
+    tickets: [],
+    ticketTotal: 0,
+  });
 
   const fetchResources = async () => {
     setLoading(true);
@@ -53,15 +77,185 @@ const ResourcesPage = () => {
 
   const handleSearch = (e) => { e.preventDefault(); setPage(0); fetchResources(); };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this resource?')) return;
-    try { await deleteResource(id); fetchResources(); }
-    catch (err) { alert(err.response?.data?.message || 'Failed to delete'); }
+  const handleDelete = async (resource) => {
+    setDeleteDialog({
+      open: true,
+      resource,
+      loading: true,
+      deleting: false,
+      error: null,
+      bookings: [],
+      tickets: [],
+      bookingTotal: 0,
+      ticketTotal: 0,
+    });
+
+    try {
+      const [bookingResult, ticketResult] = await Promise.allSettled([
+        getBookings({ resourceId: resource.id, status: 'APPROVED', page: 0, size: 5 }),
+        getTickets({ resourceId: resource.id, page: 0, size: 5 }),
+      ]);
+
+      const bookingData = bookingResult.status === 'fulfilled'
+        ? (bookingResult.value.data || bookingResult.value)
+        : { content: [], totalElements: 0 };
+      const ticketData = ticketResult.status === 'fulfilled'
+        ? (ticketResult.value.data || ticketResult.value)
+        : { content: [], totalElements: 0 };
+
+      let combinedError = null;
+      if (bookingResult.status === 'rejected' && ticketResult.status === 'rejected') {
+        combinedError = 'We could not load reference details right now. You can retry in a moment.';
+      } else if (bookingResult.status === 'rejected') {
+        combinedError = 'We could not load approved booking details right now. Please retry.';
+      }
+
+      setDeleteDialog((prev) => ({
+        ...prev,
+        loading: false,
+        error: combinedError,
+        bookings: bookingData.content || [],
+        tickets: ticketData.content || [],
+        bookingTotal: bookingData.totalElements || 0,
+        ticketTotal: ticketData.totalElements || 0,
+      }));
+    } catch (err) {
+      setDeleteDialog((prev) => ({
+        ...prev,
+        loading: false,
+        error: err.response?.data?.message || 'Failed to check linked bookings/tickets',
+      }));
+    }
   };
 
-  const handleToggleStatus = async (id) => {
-    try { await toggleResourceStatus(id); fetchResources(); }
-    catch (err) { alert(err.response?.data?.message || 'Failed to toggle status'); }
+  const closeDeleteDialog = () => {
+    setDeleteDialog({
+      open: false,
+      resource: null,
+      loading: false,
+      deleting: false,
+      error: null,
+      bookings: [],
+      tickets: [],
+      bookingTotal: 0,
+      ticketTotal: 0,
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteDialog.resource) return;
+    setDeleteDialog((prev) => ({ ...prev, deleting: true, error: null }));
+    try {
+      await deleteResource(deleteDialog.resource.id);
+      closeDeleteDialog();
+      fetchResources();
+    } catch (err) {
+      setDeleteDialog((prev) => ({
+        ...prev,
+        deleting: false,
+        error: err.response?.data?.message || 'Failed to delete',
+      }));
+    }
+  };
+
+  const handleToggleStatus = async (resource) => {
+    // Activation can proceed directly
+    if (resource.status !== 'ACTIVE') {
+      try { await toggleResourceStatus(resource.id); fetchResources(); }
+      catch (err) { alert(err.response?.data?.message || 'Failed to activate resource'); }
+      return;
+    }
+
+    try {
+      const [bookingResult, ticketResult] = await Promise.allSettled([
+        getBookings({
+          resourceId: resource.id,
+          status: 'APPROVED',
+          page: 0,
+          size: 5,
+        }),
+        getTickets({ resourceId: resource.id, page: 0, size: 5 }),
+      ]);
+
+      const bookingData = bookingResult.status === 'fulfilled'
+        ? (bookingResult.value.data || bookingResult.value)
+        : { content: [], totalElements: 0 };
+      const ticketData = ticketResult.status === 'fulfilled'
+        ? (ticketResult.value.data || ticketResult.value)
+        : { content: [], totalElements: 0 };
+
+      const approvedCount = bookingData.totalElements || 0;
+      const ticketCount = ticketData.totalElements || 0;
+
+      // No approved bookings and no linked tickets -> deactivate directly without popup
+      if (approvedCount === 0 && ticketCount === 0) {
+        await toggleResourceStatus(resource.id);
+        fetchResources();
+        return;
+      }
+
+      let dialogError = null;
+      if (bookingResult.status === 'rejected' && ticketResult.status === 'rejected') {
+        dialogError = 'We could not load reference details right now. Please retry.';
+      } else if (bookingResult.status === 'rejected') {
+        dialogError = 'We could not load approved booking details right now. Please retry.';
+      }
+
+      setToggleDialog((prev) => ({
+        ...prev,
+        open: true,
+        resource,
+        loading: false,
+        toggling: false,
+        error: dialogError,
+        bookings: bookingData.content || [],
+        bookingTotal: approvedCount,
+        tickets: ticketData.content || [],
+        ticketTotal: ticketCount,
+      }));
+    } catch {
+      setToggleDialog({
+        open: true,
+        resource,
+        loading: false,
+        toggling: false,
+        error: 'We could not process the status check right now. Please retry.',
+        bookings: [],
+        bookingTotal: 0,
+        tickets: [],
+        ticketTotal: 0,
+      });
+    }
+  };
+
+  const closeToggleDialog = () => {
+    setToggleDialog({
+      open: false,
+      resource: null,
+      loading: false,
+      toggling: false,
+      error: null,
+      bookings: [],
+      bookingTotal: 0,
+      tickets: [],
+      ticketTotal: 0,
+    });
+  };
+
+  const confirmDeactivate = async () => {
+    if (!toggleDialog.resource) return;
+    setToggleDialog((prev) => ({ ...prev, toggling: true, error: null }));
+    try {
+      await toggleResourceStatus(toggleDialog.resource.id);
+      closeToggleDialog();
+      fetchResources();
+    } catch (err) {
+      setToggleDialog((prev) => ({
+        ...prev,
+        toggling: false,
+        error: err.response?.data?.message || 'Could not deactivate this resource right now.',
+      }));
+    }
   };
 
   const handleCreate = async (e) => {
@@ -75,6 +269,8 @@ const ResourcesPage = () => {
     } catch (err) { alert(err.response?.data?.message || 'Failed to create'); }
     finally { setCreating(false); }
   };
+
+  const deleteBlocked = deleteDialog.bookingTotal > 0;
 
   return (
     <div className="space-y-4">
@@ -151,10 +347,10 @@ const ResourcesPage = () => {
                     {isAdmin && (
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
-                          <button onClick={() => handleToggleStatus(r.id)} title="Toggle status" className="text-gray-500 hover:text-blue-600">
+                          <button onClick={() => handleToggleStatus(r)} title="Toggle status" className="text-gray-500 hover:text-blue-600">
                             {r.status === 'ACTIVE' ? <ToggleRight className="h-5 w-5 text-green-600" /> : <ToggleLeft className="h-5 w-5" />}
                           </button>
-                          <button onClick={() => handleDelete(r.id)} title="Delete" className="text-gray-500 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                          <button onClick={() => handleDelete(r)} title="Delete" className="text-gray-500 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                         </div>
                       </td>
                     )}
@@ -196,6 +392,211 @@ const ResourcesPage = () => {
                 <button type="submit" disabled={creating} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50">{creating ? 'Creating...' : 'Create'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {deleteDialog.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+            <div className="flex items-start gap-3">
+              <div className={`mt-0.5 rounded-full p-2 ${deleteBlocked ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                {deleteBlocked ? <AlertTriangle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Delete Resource</h2>
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                  You are deleting <span className="font-semibold">{deleteDialog.resource?.name}</span>.
+                </p>
+              </div>
+            </div>
+
+            {deleteDialog.loading ? (
+              <div className="py-8 text-center text-sm text-gray-500">Checking linked bookings and tickets...</div>
+            ) : (
+              <div className="mt-4 space-y-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p className="text-xs uppercase tracking-wide text-amber-700">Approved Bookings</p>
+                    <p className="mt-1 text-xl font-bold text-amber-900">{deleteDialog.bookingTotal}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-xs uppercase tracking-wide text-gray-600">Linked Tickets</p>
+                    <p className="mt-1 text-xl font-bold text-gray-900">{deleteDialog.ticketTotal}</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-lg border p-3">
+                    <h3 className="mb-2 text-sm font-semibold">Current Bookings</h3>
+                    {deleteDialog.bookings.length === 0 ? (
+                      <p className="text-xs text-gray-500">No approved bookings linked.</p>
+                    ) : (
+                      <ul className="space-y-1 text-xs text-gray-700">
+                        {deleteDialog.bookings.map((b) => (
+                          <li key={b.id}>
+                            <Link className="text-blue-600 hover:underline" to={`/bookings/${b.id}`}>{b.id}</Link>
+                            {' '}| {b.status} | {new Date(b.startTime).toLocaleString()}
+                          </li>
+                        ))}
+                        {deleteDialog.bookingTotal > deleteDialog.bookings.length && (
+                          <li className="text-gray-500">...and {deleteDialog.bookingTotal - deleteDialog.bookings.length} more</li>
+                        )}
+                      </ul>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border p-3">
+                    <h3 className="mb-2 text-sm font-semibold">Current Tickets</h3>
+                    {deleteDialog.tickets.length === 0 ? (
+                      <p className="text-xs text-gray-500">No tickets linked.</p>
+                    ) : (
+                      <ul className="space-y-1 text-xs text-gray-700">
+                        {deleteDialog.tickets.map((t) => (
+                          <li key={t.id}>
+                            <Link className="text-blue-600 hover:underline" to={`/tickets/${t.id}`}>{t.id}</Link>
+                            {' '}| {t.status} | {t.title}
+                          </li>
+                        ))}
+                        {deleteDialog.ticketTotal > deleteDialog.tickets.length && (
+                          <li className="text-gray-500">...and {deleteDialog.ticketTotal - deleteDialog.tickets.length} more</li>
+                        )}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+
+                {deleteBlocked ? (
+                  <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                    Deletion is blocked because this resource has approved bookings. Cancel or complete those bookings first.
+                  </div>
+                ) : (
+                  <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
+                    No approved booking blockers were found. You can safely delete this resource.
+                  </div>
+                )}
+
+                {deleteDialog.error && (
+                  <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{deleteDialog.error}</div>
+                )}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteDialog}
+                className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={
+                  deleteDialog.loading ||
+                  deleteDialog.deleting ||
+                  deleteBlocked
+                }
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteBlocked ? 'Delete Blocked' : (deleteDialog.deleting ? 'Deleting...' : 'Yes, Delete')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toggleDialog.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Deactivate Resource</h2>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+              Resource: <span className="font-medium">{toggleDialog.resource?.name}</span>
+            </p>
+
+            {toggleDialog.loading ? (
+              <div className="py-8 text-center text-sm text-gray-500">Checking approved bookings...</div>
+            ) : (
+              <div className="mt-4 space-y-4">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  Approved bookings: <span className="font-semibold">{toggleDialog.bookingTotal}</span>
+                  {' '}| Linked tickets: <span className="font-semibold">{toggleDialog.ticketTotal}</span>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-lg border p-3">
+                    <h3 className="mb-2 text-sm font-semibold">Current Approved Bookings</h3>
+                    {toggleDialog.bookings.length === 0 ? (
+                      <p className="text-xs text-gray-500">No approved bookings linked.</p>
+                    ) : (
+                      <ul className="space-y-1 text-xs text-gray-700">
+                        {toggleDialog.bookings.map((b) => (
+                          <li key={b.id}>
+                            <Link className="text-blue-600 hover:underline" to={`/bookings/${b.id}`}>{b.id}</Link>
+                            {' '}| {b.status} | {new Date(b.startTime).toLocaleString()}
+                          </li>
+                        ))}
+                        {toggleDialog.bookingTotal > toggleDialog.bookings.length && (
+                          <li className="text-gray-500">...and {toggleDialog.bookingTotal - toggleDialog.bookings.length} more</li>
+                        )}
+                      </ul>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border p-3">
+                    <h3 className="mb-2 text-sm font-semibold">Current Tickets</h3>
+                    {toggleDialog.tickets.length === 0 ? (
+                      <p className="text-xs text-gray-500">No tickets linked.</p>
+                    ) : (
+                      <ul className="space-y-1 text-xs text-gray-700">
+                        {toggleDialog.tickets.map((t) => (
+                          <li key={t.id}>
+                            <Link className="text-blue-600 hover:underline" to={`/tickets/${t.id}`}>{t.id}</Link>
+                            {' '}| {t.status} | {t.title}
+                          </li>
+                        ))}
+                        {toggleDialog.ticketTotal > toggleDialog.tickets.length && (
+                          <li className="text-gray-500">...and {toggleDialog.ticketTotal - toggleDialog.tickets.length} more</li>
+                        )}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+
+                {toggleDialog.bookingTotal > 0 && (
+                  <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                    This resource has approved bookings, so deactivation is currently blocked.
+                  </div>
+                )}
+
+                {toggleDialog.error && (
+                  <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{toggleDialog.error}</div>
+                )}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeToggleDialog}
+                className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeactivate}
+                disabled={
+                  toggleDialog.loading ||
+                  toggleDialog.toggling ||
+                  toggleDialog.bookingTotal > 0
+                }
+                className="rounded-lg bg-amber-600 px-4 py-2 text-sm text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                {toggleDialog.toggling ? 'Deactivating...' : 'Deactivate'}
+              </button>
+            </div>
           </div>
         </div>
       )}

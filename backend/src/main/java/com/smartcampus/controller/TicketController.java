@@ -47,6 +47,7 @@ public class TicketController {
     public ResponseEntity<ApiResponse<PagedResponse<TicketResponse>>> getAllTickets(
             @RequestParam(required = false) String reporterId,
             @RequestParam(required = false) String assignedToId,
+            @RequestParam(required = false) String resourceId,
             @RequestParam(required = false) TicketStatus status,
             @RequestParam(required = false) Priority priority,
             @RequestParam(required = false) TicketCategory category,
@@ -54,7 +55,7 @@ public class TicketController {
             @RequestParam(defaultValue = "10") int size) {
 
         PagedResponse<TicketResponse> tickets = ticketService.getAllTickets(
-                reporterId, assignedToId, status, priority, category, page, size);
+                reporterId, assignedToId, resourceId, status, priority, category, page, size);
         return ResponseEntity.ok(ApiResponse.success("Tickets retrieved successfully", tickets));
     }
 
