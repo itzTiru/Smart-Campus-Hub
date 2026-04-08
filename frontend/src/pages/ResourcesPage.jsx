@@ -1,9 +1,54 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Filter, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
-import { getResources, deleteResource, toggleResourceStatus, createResource, searchResources } from '../api/resourceApi';
+import {
+  Building2,
+  Clock3,
+  Filter,
+  MapPin,
+  Plus,
+  Search,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+  Users,
+  X,
+} from 'lucide-react';
+import {
+  createResource,
+  deleteResource,
+  getResources,
+  searchResources,
+  toggleResourceStatus,
+} from '../api/resourceApi';
 import { useAuthStore } from '../store/authStore';
-import { RESOURCE_TYPES, RESOURCE_STATUS } from '../utils/constants';
+import { RESOURCE_STATUS, RESOURCE_TYPES } from '../utils/constants';
+
+const defaultCreateForm = {
+  name: '',
+  type: 'LECTURE_HALL',
+  capacity: '',
+  location: '',
+  building: '',
+  floor: '',
+  description: '',
+  availabilityStart: '08:00',
+  availabilityEnd: '18:00',
+};
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'All Status' },
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'OUT_OF_SERVICE', label: 'Out of Service' },
+];
+
+const PAGE_SIZE = 12;
+
+const resolvePageData = (payload) => {
+  const data = payload?.data || payload;
+  return data?.content ? data : { content: [], totalPages: 0 };
+};
+
+const getTypeLabel = (type) => RESOURCE_TYPES.find((t) => t.value === type)?.label || type;
 
 const ResourcesPage = () => {
   const { user } = useAuthStore();
@@ -11,189 +56,520 @@ const ResourcesPage = () => {
 
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
+
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+
+  const [showFilters, setShowFilters] = useState(true);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
+
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [locationFilter, setLocationFilter] = useState('');
+  const [minCapacityFilter, setMinCapacityFilter] = useState('');
+
   const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({
-    name: '', type: 'LECTURE_HALL', capacity: '', location: '',
-    building: '', floor: '', description: '', availabilityStart: '08:00', availabilityEnd: '18:00',
-  });
+  const [createForm, setCreateForm] = useState(defaultCreateForm);
   const [creating, setCreating] = useState(false);
 
-  const fetchResources = async () => {
+  const fetchResources = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setError('');
+
     try {
-      let result;
+      let pageData;
+
       if (searchKeyword.trim()) {
-        result = await searchResources(searchKeyword, page, 10);
+        const result = await searchResources(searchKeyword.trim(), page, PAGE_SIZE);
+        pageData = resolvePageData(result);
       } else {
-        result = await getResources({
+        const result = await getResources({
           type: typeFilter || undefined,
           status: statusFilter || undefined,
-          page, size: 10,
+          location: locationFilter.trim() || undefined,
+          minCapacity: minCapacityFilter ? Number(minCapacityFilter) : undefined,
+          page,
+          size: PAGE_SIZE,
         });
+        pageData = resolvePageData(result);
       }
-      const data = result.data || result;
-      setResources(data.content || []);
-      setTotalPages(data.totalPages || 0);
+
+      setResources(pageData.content || []);
+      setTotalPages(pageData.totalPages || 0);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load resources');
+      setError(err.response?.data?.message || 'Failed to load resources. Please try again.');
+      setResources([]);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
+  }, [locationFilter, minCapacityFilter, page, searchKeyword, statusFilter, typeFilter]);
+
+  useEffect(() => {
+    fetchResources();
+  }, [fetchResources]);
+
+  const stats = useMemo(() => {
+    const total = resources.length;
+    const active = resources.filter((resource) => resource.status === 'ACTIVE').length;
+    const outOfService = resources.filter((resource) => resource.status === 'OUT_OF_SERVICE').length;
+    const totalCapacity = resources.reduce((sum, resource) => sum + (resource.capacity || 0), 0);
+
+    return [
+      { title: 'Showing', value: total, subtitle: 'resources on this page' },
+      { title: 'Available', value: active, subtitle: 'currently active' },
+      { title: 'Out Of Service', value: outOfService, subtitle: 'temporarily unavailable' },
+      { title: 'Total Capacity', value: totalCapacity, subtitle: 'combined seats/units' },
+    ];
+  }, [resources]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setPage(0);
+    setSearchKeyword(searchInput);
   };
 
-  useEffect(() => { fetchResources(); }, [page, typeFilter, statusFilter]);
-
-  const handleSearch = (e) => { e.preventDefault(); setPage(0); fetchResources(); };
+  const clearAllFilters = () => {
+    setTypeFilter('');
+    setStatusFilter('');
+    setLocationFilter('');
+    setMinCapacityFilter('');
+    setSearchInput('');
+    setSearchKeyword('');
+    setPage(0);
+  };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this resource?')) return;
-    try { await deleteResource(id); fetchResources(); }
-    catch (err) { alert(err.response?.data?.message || 'Failed to delete'); }
+    if (!confirm('Delete this resource? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await deleteResource(id);
+      fetchResources();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete resource.');
+    }
   };
 
   const handleToggleStatus = async (id) => {
-    try { await toggleResourceStatus(id); fetchResources(); }
-    catch (err) { alert(err.response?.data?.message || 'Failed to toggle status'); }
+    try {
+      await toggleResourceStatus(id);
+      fetchResources();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to toggle resource status.');
+    }
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
     setCreating(true);
+
     try {
-      await createResource({ ...createForm, capacity: parseInt(createForm.capacity) || 0 });
+      await createResource({
+        ...createForm,
+        capacity: Number(createForm.capacity),
+      });
+
       setShowCreate(false);
-      setCreateForm({ name: '', type: 'LECTURE_HALL', capacity: '', location: '', building: '', floor: '', description: '', availabilityStart: '08:00', availabilityEnd: '18:00' });
+      setCreateForm(defaultCreateForm);
       fetchResources();
-    } catch (err) { alert(err.response?.data?.message || 'Failed to create'); }
-    finally { setCreating(false); }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to create resource.');
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Resources</h1>
-        <div className="flex gap-2">
-          <button onClick={() => setShowFilters(!showFilters)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50">
-            <Filter className="h-4 w-4" /> Filters
-          </button>
-          {isAdmin && (
-            <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700">
-              <Plus className="h-4 w-4" /> Add Resource
+    <div className="space-y-5">
+      <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-cyan-50 via-white to-amber-50 p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Campus Resources</h1>
+            <p className="mt-1 text-sm text-slate-600">Discover, filter, and manage spaces and equipment quickly.</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowFilters((prev) => !prev)}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <Filter className="h-4 w-4" />
+              {showFilters ? 'Hide Filters' : 'Show Filters'}
             </button>
-          )}
+            {isAdmin && (
+              <button
+                onClick={() => setShowCreate(true)}
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+              >
+                <Plus className="h-4 w-4" />
+                Add Resource
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      <form onSubmit={handleSearch} className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input type="text" value={searchKeyword} onChange={(e) => setSearchKeyword(e.target.value)}
-            placeholder="Search resources..." className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {stats.map((card) => (
+            <article key={card.title} className="rounded-xl border border-slate-200 bg-white/90 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{card.title}</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{card.value}</p>
+              <p className="mt-1 text-xs text-slate-500">{card.subtitle}</p>
+            </article>
+          ))}
         </div>
-        <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">Search</button>
-      </form>
+      </section>
 
-      {showFilters && (
-        <div className="flex flex-wrap gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(0); }} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
-            <option value="">All Types</option>
-            {RESOURCE_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
-            <option value="">All Status</option>
-            <option value="ACTIVE">Active</option>
-            <option value="OUT_OF_SERVICE">Out of Service</option>
-          </select>
-          <button onClick={() => { setTypeFilter(''); setStatusFilter(''); setSearchKeyword(''); setPage(0); }} className="text-sm text-blue-600 hover:underline">Clear</button>
+      <section className="sticky top-2 z-10 space-y-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur">
+        <form onSubmit={handleSearch} className="flex flex-col gap-2 md:flex-row md:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search by resource name, type, or location"
+              className="w-full rounded-lg border border-slate-300 py-2 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-cyan-500"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700"
+          >
+            Search
+          </button>
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Reset
+          </button>
+        </form>
+
+        {showFilters && (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <select
+              value={typeFilter}
+              onChange={(e) => {
+                setTypeFilter(e.target.value);
+                setPage(0);
+              }}
+              disabled={Boolean(searchKeyword)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
+            >
+              <option value="">All Types</option>
+              {RESOURCE_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(0);
+              }}
+              disabled={Boolean(searchKeyword)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
+            >
+              {STATUS_OPTIONS.map((status) => (
+                <option key={status.value || 'ALL'} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="text"
+              value={locationFilter}
+              onChange={(e) => {
+                setLocationFilter(e.target.value);
+                setPage(0);
+              }}
+              placeholder="Filter by location"
+              disabled={Boolean(searchKeyword)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
+            />
+
+            <input
+              type="number"
+              min="1"
+              value={minCapacityFilter}
+              onChange={(e) => {
+                setMinCapacityFilter(e.target.value);
+                setPage(0);
+              }}
+              placeholder="Min capacity"
+              disabled={Boolean(searchKeyword)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
+            />
+          </div>
+        )}
+
+        {searchKeyword && (
+          <p className="text-xs text-slate-500">
+            Search mode is active for "{searchKeyword}". Clear search to re-enable advanced filters.
+          </p>
+        )}
+      </section>
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+          {error}
         </div>
       )}
 
-      {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
-
       {loading ? (
-        <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" /></div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="animate-pulse rounded-xl border border-slate-200 p-4">
+              <div className="h-4 w-2/3 rounded bg-slate-200" />
+              <div className="mt-3 h-3 w-1/2 rounded bg-slate-200" />
+              <div className="mt-4 h-3 w-full rounded bg-slate-200" />
+              <div className="mt-2 h-3 w-4/5 rounded bg-slate-200" />
+            </div>
+          ))}
+        </div>
       ) : resources.length === 0 ? (
-        <div className="py-12 text-center text-gray-500">No resources found.</div>
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center">
+          <h2 className="text-lg font-semibold text-slate-900">No resources found</h2>
+          <p className="mt-1 text-sm text-slate-500">Try adjusting your filters or reset to see all resources.</p>
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            <X className="h-4 w-4" />
+            Clear Filters
+          </button>
+        </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Name</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Type</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Location</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Capacity</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
-                  {isAdmin && <th className="px-4 py-3 text-left font-medium text-gray-600">Actions</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {resources.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3"><Link to={`/resources/${r.id}`} className="font-medium text-blue-600 hover:underline">{r.name}</Link></td>
-                    <td className="px-4 py-3 text-gray-600">{RESOURCE_TYPES.find(t => t.value === r.type)?.label || r.type}</td>
-                    <td className="px-4 py-3 text-gray-600">{r.location || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600">{r.capacity || '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${RESOURCE_STATUS[r.status]?.bgClass || 'bg-gray-100 text-gray-800'}`}>
-                        {RESOURCE_STATUS[r.status]?.label || r.status}
-                      </span>
-                    </td>
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {resources.map((resource) => {
+              const status = RESOURCE_STATUS[resource.status] || {
+                label: resource.status,
+                bgClass: 'bg-slate-100 text-slate-700',
+              };
+
+              return (
+                <article key={resource.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <Link to={`/resources/${resource.id}`} className="text-base font-semibold text-slate-900 hover:text-cyan-700">
+                        {resource.name}
+                      </Link>
+                      <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                        {getTypeLabel(resource.type)}
+                      </p>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${status.bgClass}`}>
+                      {status.label}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-2 text-sm text-slate-600">
+                    <p className="inline-flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-slate-400" />
+                      {resource.location || 'No location specified'}
+                    </p>
+                    <p className="inline-flex items-center gap-2">
+                      <Users className="h-4 w-4 text-slate-400" />
+                      Capacity: {resource.capacity || 0}
+                    </p>
+                    <p className="inline-flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-slate-400" />
+                      {resource.building || 'Building N/A'} {resource.floor ? `- Floor ${resource.floor}` : ''}
+                    </p>
+                    <p className="inline-flex items-center gap-2">
+                      <Clock3 className="h-4 w-4 text-slate-400" />
+                      {resource.availabilityStart || '--:--'} to {resource.availabilityEnd || '--:--'}
+                    </p>
+                  </div>
+
+                  {resource.description && (
+                    <p className="mt-3 line-clamp-2 text-sm text-slate-500">{resource.description}</p>
+                  )}
+
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <Link
+                      to={`/resources/${resource.id}`}
+                      className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700 hover:bg-cyan-100"
+                    >
+                      View Details
+                    </Link>
+
                     {isAdmin && (
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <button onClick={() => handleToggleStatus(r.id)} title="Toggle status" className="text-gray-500 hover:text-blue-600">
-                            {r.status === 'ACTIVE' ? <ToggleRight className="h-5 w-5 text-green-600" /> : <ToggleLeft className="h-5 w-5" />}
-                          </button>
-                          <button onClick={() => handleDelete(r.id)} title="Delete" className="text-gray-500 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
-                        </div>
-                      </td>
+                      <>
+                        <button
+                          onClick={() => handleToggleStatus(resource.id)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          title="Toggle status"
+                        >
+                          {resource.status === 'ACTIVE' ? (
+                            <ToggleRight className="h-4 w-4 text-emerald-600" />
+                          ) : (
+                            <ToggleLeft className="h-4 w-4 text-amber-600" />
+                          )}
+                          Toggle
+                        </button>
+                        <button
+                          onClick={() => handleDelete(resource.id)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+                          title="Delete resource"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete
+                        </button>
+                      </>
                     )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <button disabled={page === 0} onClick={() => setPage(page - 1)} className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-50">Previous</button>
-              <span className="text-sm text-gray-600">Page {page + 1} of {totalPages}</span>
-              <button disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)} className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-50">Next</button>
+            <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3">
+              <button
+                disabled={page === 0}
+                onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-slate-600">
+                Page {page + 1} of {totalPages}
+              </span>
+              <button
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((prev) => prev + 1)}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next
+              </button>
             </div>
           )}
         </>
       )}
 
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
-            <h2 className="mb-4 text-lg font-bold dark:text-gray-100">Create Resource</h2>
-            <form onSubmit={handleCreate} className="space-y-3">
-              <input required placeholder="Name *" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" />
-              <select value={createForm.type} onChange={(e) => setCreateForm({ ...createForm, type: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm">
-                {RESOURCE_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
-              <div className="grid grid-cols-2 gap-3">
-                <input type="number" placeholder="Capacity" value={createForm.capacity} onChange={(e) => setCreateForm({ ...createForm, capacity: e.target.value })} className="rounded-lg border px-3 py-2 text-sm" />
-                <input placeholder="Location" value={createForm.location} onChange={(e) => setCreateForm({ ...createForm, location: e.target.value })} className="rounded-lg border px-3 py-2 text-sm" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Create New Resource</h2>
+                <p className="mt-1 text-sm text-slate-500">Add key details so users can discover and book it easily.</p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <input placeholder="Building" value={createForm.building} onChange={(e) => setCreateForm({ ...createForm, building: e.target.value })} className="rounded-lg border px-3 py-2 text-sm" />
-                <input placeholder="Floor" value={createForm.floor} onChange={(e) => setCreateForm({ ...createForm, floor: e.target.value })} className="rounded-lg border px-3 py-2 text-sm" />
+              <button
+                onClick={() => setShowCreate(false)}
+                className="rounded-lg border border-slate-300 p-2 text-slate-500 hover:bg-slate-50"
+                aria-label="Close modal"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreate} className="mt-4 space-y-3">
+              <input
+                required
+                value={createForm.name}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Resource name"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <select
+                  value={createForm.type}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, type: e.target.value }))}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                >
+                  {RESOURCE_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={createForm.capacity}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, capacity: e.target.value }))}
+                  placeholder="Capacity"
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
               </div>
-              <textarea placeholder="Description" value={createForm.description} onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })} rows={2} className="w-full rounded-lg border px-3 py-2 text-sm" />
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <input
+                  required
+                  value={createForm.location}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, location: e.target.value }))}
+                  placeholder="Location"
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+                <input
+                  value={createForm.building}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, building: e.target.value }))}
+                  placeholder="Building"
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <input
+                  value={createForm.floor}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, floor: e.target.value }))}
+                  placeholder="Floor"
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="time"
+                    value={createForm.availabilityStart}
+                    onChange={(e) => setCreateForm((prev) => ({ ...prev, availabilityStart: e.target.value }))}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="time"
+                    value={createForm.availabilityEnd}
+                    onChange={(e) => setCreateForm((prev) => ({ ...prev, availabilityEnd: e.target.value }))}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+
+              <textarea
+                rows={3}
+                value={createForm.description}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Description"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowCreate(false)} className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={creating} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50">{creating ? 'Creating...' : 'Create'}</button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(false)}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {creating ? 'Creating...' : 'Create Resource'}
+                </button>
               </div>
             </form>
           </div>
