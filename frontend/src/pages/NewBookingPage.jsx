@@ -1,11 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { ArrowLeft, AlertTriangle, Info } from 'lucide-react';
 import { createBooking, checkConflicts, getMyBookings } from '../api/bookingApi';
 import { getResources } from '../api/resourceApi';
+import { useAuthStore } from '../store/authStore';
 
 const NewBookingPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
   const [searchParams] = useSearchParams();
   const preselectedResource = searchParams.get('resourceId');
 
@@ -110,6 +113,10 @@ const NewBookingPage = () => {
       setError(err.response?.data?.message || 'Failed to create booking');
     } finally { setSubmitting(false); }
   };
+
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
 
   return (
     <div className="space-y-4">
