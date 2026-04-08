@@ -19,4 +19,7 @@ public interface TicketRepository extends MongoRepository<Ticket, String> {
     Page<Ticket> findByAssignedToId(ObjectId technicianId, Pageable pageable);
 
     Page<Ticket> findByStatus(TicketStatus status, Pageable pageable);
+
+    @Query(value = "{'resource': ?0}", count = true)
+    long countByResourceId(ObjectId resourceId);
 }

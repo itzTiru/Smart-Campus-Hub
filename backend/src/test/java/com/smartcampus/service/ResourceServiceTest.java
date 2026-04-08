@@ -5,9 +5,11 @@ import com.smartcampus.dto.response.ResourceResponse;
 import com.smartcampus.entity.Resource;
 import com.smartcampus.entity.enums.ResourceStatus;
 import com.smartcampus.entity.enums.ResourceType;
+import com.smartcampus.exception.BadRequestException;
 import com.smartcampus.exception.ResourceNotFoundException;
 import com.smartcampus.repository.BookingRepository;
 import com.smartcampus.repository.ResourceRepository;
+import com.smartcampus.repository.TicketRepository;
 import com.smartcampus.service.impl.ResourceServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,6 +32,7 @@ class ResourceServiceTest {
 
     @Mock private ResourceRepository resourceRepository;
     @Mock private BookingRepository bookingRepository;
+    @Mock private TicketRepository ticketRepository;
     @Mock private MongoTemplate mongoTemplate;
 
     @InjectMocks
@@ -118,11 +121,41 @@ class ResourceServiceTest {
     @Test
     @DisplayName("Should delete a resource")
     void deleteResource_Success() {
-        when(resourceRepository.findById("res1")).thenReturn(Optional.of(sampleResource));
+        when(resourceRepository.findById("507f1f77bcf86cd799439011")).thenReturn(Optional.of(sampleResource));
+        when(bookingRepository.countByResourceId(any())).thenReturn(0L);
+        when(ticketRepository.countByResourceId(any())).thenReturn(0L);
 
-        resourceService.deleteResource("res1");
+        resourceService.deleteResource("507f1f77bcf86cd799439011");
 
         verify(resourceRepository).delete(sampleResource);
+    }
+
+    @Test
+    @DisplayName("Should block delete when resource has related bookings")
+    void deleteResource_WithBookings_ShouldThrowBadRequest() {
+        when(resourceRepository.findById("507f1f77bcf86cd799439011")).thenReturn(Optional.of(sampleResource));
+        when(bookingRepository.countByResourceId(any())).thenReturn(2L);
+        when(ticketRepository.countByResourceId(any())).thenReturn(0L);
+
+        assertThatThrownBy(() -> resourceService.deleteResource("507f1f77bcf86cd799439011"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Cannot delete resource because it is referenced");
+
+        verify(resourceRepository, never()).delete(any(Resource.class));
+    }
+
+    @Test
+    @DisplayName("Should block delete when resource has related tickets")
+    void deleteResource_WithTickets_ShouldThrowBadRequest() {
+        when(resourceRepository.findById("507f1f77bcf86cd799439011")).thenReturn(Optional.of(sampleResource));
+        when(bookingRepository.countByResourceId(any())).thenReturn(0L);
+        when(ticketRepository.countByResourceId(any())).thenReturn(3L);
+
+        assertThatThrownBy(() -> resourceService.deleteResource("507f1f77bcf86cd799439011"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Cannot delete resource because it is referenced");
+
+        verify(resourceRepository, never()).delete(any(Resource.class));
     }
 
     @Test

@@ -10,11 +10,14 @@ import com.smartcampus.entity.Resource;
 import com.smartcampus.entity.User;
 import com.smartcampus.entity.enums.ResourceStatus;
 import com.smartcampus.entity.enums.ResourceType;
+import com.smartcampus.exception.BadRequestException;
 import com.smartcampus.exception.ResourceNotFoundException;
 import com.smartcampus.repository.BookingRepository;
 import com.smartcampus.repository.ResourceRepository;
+import com.smartcampus.repository.TicketRepository;
 import com.smartcampus.service.ResourceService;
 import lombok.RequiredArgsConstructor;
+import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -37,6 +40,7 @@ public class ResourceServiceImpl implements ResourceService {
 
     private final ResourceRepository resourceRepository;
     private final BookingRepository bookingRepository;
+    private final TicketRepository ticketRepository;
     private final MongoTemplate mongoTemplate;
 
     @Override
@@ -99,6 +103,19 @@ public class ResourceServiceImpl implements ResourceService {
     public void deleteResource(String id) {
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource", "id", id));
+
+        ObjectId resourceId = new ObjectId(id);
+        long bookingCount = bookingRepository.countByResourceId(resourceId);
+        long ticketCount = ticketRepository.countByResourceId(resourceId);
+
+        if (bookingCount > 0 || ticketCount > 0) {
+            throw new BadRequestException(
+                    "Cannot delete resource because it is referenced by "
+                            + bookingCount + " booking(s) and "
+                            + ticketCount + " ticket(s)."
+            );
+        }
+
         resourceRepository.delete(resource);
     }
 
