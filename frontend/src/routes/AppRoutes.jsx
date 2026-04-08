@@ -18,6 +18,9 @@ const TicketDetailPage = React.lazy(() => import('../pages/TicketDetailPage'));
 const AdminDashboard = React.lazy(() => import('../pages/AdminDashboard'));
 const UserManagementPage = React.lazy(() => import('../pages/UserManagementPage'));
 const LoginPage = React.lazy(() => import('../pages/LoginPage'));
+const TechnicianLoginPage = React.lazy(() => import('../pages/TechnicianLoginPage'));
+const TechnicianRegisterPage = React.lazy(() => import('../pages/TechnicianRegisterPage'));
+const TechnicianDashboardPage = React.lazy(() => import('../pages/TechnicianDashboardPage'));
 const OAuth2RedirectHandler = React.lazy(() => import('../pages/OAuth2RedirectHandler'));
 const NotificationPreferences = React.lazy(() => import('../pages/NotificationPreferences'));
 const NotFoundPage = React.lazy(() => import('../pages/NotFoundPage'));
@@ -57,6 +60,9 @@ const AppRoutes = () => {
 
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/technician/login" element={<TechnicianLoginPage />} />
+        <Route path="/technician/register" element={<TechnicianRegisterPage />} />
+        <Route path="/technician/dashboard" element={<TechnicianDashboardPage />} />
         <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
 
         {/* Catch-all */}

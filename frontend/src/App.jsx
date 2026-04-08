@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 
 const AppInit = () => {
   const { initTheme } = useThemeStore();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { initTheme(); }, []);
   useAuth();
   useWebSocket();

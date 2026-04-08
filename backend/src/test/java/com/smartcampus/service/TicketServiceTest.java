@@ -196,7 +196,7 @@ class TicketServiceTest {
         when(ticketAttachmentRepository.findByTicketId("t1")).thenReturn(Collections.emptyList());
         when(commentRepository.findByTicketIdOrderByCreatedAtAsc("t1")).thenReturn(Collections.emptyList());
 
-        TicketResponse response = ticketService.assignTicket("t1", "u2", "u99");
+        ticketService.assignTicket("t1", "u2", "u99");
 
         assertThat(ticket.getAssignedTo()).isEqualTo(technician);
         assertThat(ticket.getStatus()).isEqualTo(TicketStatus.IN_PROGRESS);

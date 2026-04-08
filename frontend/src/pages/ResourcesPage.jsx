@@ -49,6 +49,7 @@ const ResourcesPage = () => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchResources(); }, [page, typeFilter, statusFilter]);
 
   const handleSearch = (e) => { e.preventDefault(); setPage(0); fetchResources(); };

@@ -84,7 +84,7 @@ public class TicketController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<TicketResponse>> updateTicketStatus(
             @PathVariable String id,
             @Valid @RequestBody TicketStatusUpdateRequest request,

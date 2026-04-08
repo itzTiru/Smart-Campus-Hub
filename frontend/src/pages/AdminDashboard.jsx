@@ -56,7 +56,7 @@ const AdminDashboard = () => {
         setBookingStatusData(bookingCounts.filter(b => b.count > 0));
 
         // Ticket status distribution
-        const ticketStatuses = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED'];
+        const ticketStatuses = ['OPEN', 'ASSIGNED', 'WORKING_ON', 'DECLINED', 'RESOLVED', 'CLOSED', 'REJECTED'];
         const ticketCounts = await Promise.all(
           ticketStatuses.map(s => getTickets({ status: s, size: 1 }).then(r => ({ status: s, count: (r.data || r).totalElements || 0 })).catch(() => ({ status: s, count: 0 })))
         );

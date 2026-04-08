@@ -2,6 +2,8 @@ package com.smartcampus.service.impl;
 
 import com.smartcampus.dto.request.TicketRequest;
 import com.smartcampus.dto.request.TicketStatusUpdateRequest;
+import com.smartcampus.dto.request.TechnicianAssignmentResponseRequest;
+import com.smartcampus.dto.request.TechnicianMarkDoneRequest;
 import com.smartcampus.dto.response.*;
 import com.smartcampus.entity.*;
 import com.smartcampus.entity.enums.*;
@@ -34,12 +36,19 @@ import java.util.stream.Collectors;
 public class TicketServiceImpl implements TicketService {
 
     private static final int MAX_ATTACHMENTS = 3;
+    private static final int MAX_ACTIVE_JOBS_PER_TECHNICIAN = 4;
+    private static final List<TicketStatus> TECHNICIAN_ACTIVE_STATUSES = List.of(
+            TicketStatus.ASSIGNED,
+            TicketStatus.WORKING_ON,
+            TicketStatus.IN_PROGRESS
+    );
 
     private final TicketRepository ticketRepository;
     private final TicketAttachmentRepository ticketAttachmentRepository;
     private final CommentRepository commentRepository;
     private final ResourceRepository resourceRepository;
     private final UserRepository userRepository;
+    private final TechnicianRepository technicianRepository;
     private final FileStorageService fileStorageService;
     private final NotificationService notificationService;
     private final MongoTemplate mongoTemplate;
@@ -200,13 +209,15 @@ public class TicketServiceImpl implements TicketService {
 
         ticket.setStatus(request.getStatus());
 
-        if (request.getStatus() == TicketStatus.IN_PROGRESS && ticket.getFirstResponseAt() == null) {
+        if ((request.getStatus() == TicketStatus.IN_PROGRESS || request.getStatus() == TicketStatus.WORKING_ON)
+                && ticket.getFirstResponseAt() == null) {
             ticket.setFirstResponseAt(LocalDateTime.now());
         }
 
         if (request.getStatus() == TicketStatus.RESOLVED) {
             ticket.setResolvedAt(LocalDateTime.now());
             ticket.setResolutionNotes(request.getResolutionNotes());
+            ticket.setTechnicianDeclineReason(null);
         }
 
         if (request.getStatus() == TicketStatus.REJECTED) {
@@ -235,43 +246,130 @@ public class TicketServiceImpl implements TicketService {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", id));
 
-        User technician = userRepository.findById(technicianId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", technicianId));
-
-        if (technician.getRole() == null || technician.getRole().getName() != RoleName.TECHNICIAN) {
-            throw new BadRequestException("User with id " + technicianId + " is not a technician");
+        if (ticket.getStatus() == TicketStatus.RESOLVED || ticket.getStatus() == TicketStatus.CLOSED) {
+            throw new BadRequestException("Cannot assign technician to a resolved/closed ticket");
         }
 
-        ticket.setAssignedTo(technician);
+        Technician technician = technicianRepository.findById(technicianId)
+                .orElseThrow(() -> new ResourceNotFoundException("Technician", "id", technicianId));
 
-        if (ticket.getStatus() == TicketStatus.OPEN) {
-            ticket.setStatus(TicketStatus.IN_PROGRESS);
-            if (ticket.getFirstResponseAt() == null) {
-                ticket.setFirstResponseAt(LocalDateTime.now());
-            }
+        if (!Boolean.TRUE.equals(technician.getIsActive())) {
+            throw new BadRequestException("Selected technician account is inactive");
         }
+
+        if (ticket.getCategory() != null && technician.getSpecialtyCategory() != ticket.getCategory()) {
+            throw new BadRequestException(
+                    "Technician specialty (" + technician.getSpecialtyCategory() + ") does not match ticket category (" + ticket.getCategory() + ")");
+        }
+
+        long activeJobs = ticketRepository.countByAssignedTechnicianIdAndStatusIn(
+                technician.getId(), TECHNICIAN_ACTIVE_STATUSES);
+        if (activeJobs >= MAX_ACTIVE_JOBS_PER_TECHNICIAN) {
+            throw new BadRequestException("Technician already has maximum active workload (4 jobs)");
+        }
+
+        String previousTechnicianId = ticket.getAssignedTechnicianId();
+
+        ticket.setAssignedTechnicianId(technician.getId());
+        ticket.setAssignedTechnicianName(technician.getFullName());
+        ticket.setStatus(TicketStatus.ASSIGNED);
+        ticket.setTechnicianDeclineReason(null);
 
         ticket = ticketRepository.save(ticket);
 
-        notificationService.sendNotification(
-                technicianId,
-                NotificationType.TICKET_ASSIGNED,
-                "New Ticket Assigned",
-                "You have been assigned to ticket: \"" + ticket.getTitle() + "\"",
-                "TICKET",
-                ticket.getId()
-        );
+        refreshTechnicianActiveJobs(technician.getId());
+        if (previousTechnicianId != null && !previousTechnicianId.equals(technician.getId())) {
+            refreshTechnicianActiveJobs(previousTechnicianId);
+        }
 
         notificationService.sendNotification(
                 ticket.getReporter().getId(),
                 NotificationType.TICKET_ASSIGNED,
                 "Ticket Assigned",
-                "Your ticket \"" + ticket.getTitle() + "\" has been assigned to " + technician.getName(),
+                "Your ticket \"" + ticket.getTitle() + "\" has been assigned to " + technician.getFullName(),
                 "TICKET",
                 ticket.getId()
         );
 
         return mapToResponse(ticket);
+    }
+
+    @Override
+    public PagedResponse<TicketResponse> getTicketsForTechnician(String technicianId, TicketStatus status, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Ticket> ticketPage = status == null
+                ? ticketRepository.findByAssignedTechnicianId(technicianId, pageable)
+                : ticketRepository.findByAssignedTechnicianIdAndStatus(technicianId, status, pageable);
+
+        List<TicketResponse> content = ticketPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        return PagedResponse.<TicketResponse>builder()
+                .content(content)
+                .page(ticketPage.getNumber())
+                .size(ticketPage.getSize())
+                .totalElements(ticketPage.getTotalElements())
+                .totalPages(ticketPage.getTotalPages())
+                .last(ticketPage.isLast())
+                .build();
+    }
+
+    @Override
+    public TicketResponse technicianRespondToAssignment(String ticketId, String technicianId,
+                                                        TechnicianAssignmentResponseRequest request) {
+        Ticket ticket = ticketRepository.findByIdAndAssignedTechnicianId(ticketId, technicianId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", ticketId));
+
+        if (ticket.getStatus() != TicketStatus.ASSIGNED) {
+            throw new BadRequestException("You can only respond to tickets in ASSIGNED status");
+        }
+
+        if (Boolean.TRUE.equals(request.getAccepted())) {
+            ticket.setStatus(TicketStatus.WORKING_ON);
+            ticket.setTechnicianDeclineReason(null);
+            if (ticket.getFirstResponseAt() == null) {
+                ticket.setFirstResponseAt(LocalDateTime.now());
+            }
+        } else {
+            if (request.getDeclineReason() == null || request.getDeclineReason().isBlank()) {
+                throw new BadRequestException("Decline reason is required when declining an assignment");
+            }
+            ticket.setStatus(TicketStatus.DECLINED);
+            ticket.setTechnicianDeclineReason(request.getDeclineReason().trim());
+        }
+
+        ticket = ticketRepository.save(ticket);
+        refreshTechnicianActiveJobs(technicianId);
+        return mapToResponse(ticket);
+    }
+
+    @Override
+    public TicketResponse technicianMarkDone(String ticketId, String technicianId, TechnicianMarkDoneRequest request) {
+        Ticket ticket = ticketRepository.findByIdAndAssignedTechnicianId(ticketId, technicianId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", ticketId));
+
+        if (ticket.getStatus() != TicketStatus.WORKING_ON && ticket.getStatus() != TicketStatus.IN_PROGRESS) {
+            throw new BadRequestException("Only WORKING_ON tickets can be marked as done");
+        }
+
+        ticket.setStatus(TicketStatus.RESOLVED);
+        ticket.setResolvedAt(LocalDateTime.now());
+        ticket.setResolutionNotes(request != null ? request.getResolutionNotes() : null);
+        ticket.setTechnicianDeclineReason(null);
+
+        ticket = ticketRepository.save(ticket);
+        refreshTechnicianActiveJobs(technicianId);
+        return mapToResponse(ticket);
+    }
+
+    private void refreshTechnicianActiveJobs(String technicianId) {
+        technicianRepository.findById(technicianId).ifPresent(tech -> {
+            long count = ticketRepository.countByAssignedTechnicianIdAndStatusIn(
+                    technicianId, TECHNICIAN_ACTIVE_STATUSES);
+            tech.setCurrentActiveJobs((int) count);
+            technicianRepository.save(tech);
+        });
     }
 
     @Override
@@ -343,8 +441,10 @@ public class TicketServiceImpl implements TicketService {
 
     private void validateStatusTransition(TicketStatus currentStatus, TicketStatus newStatus) {
         boolean valid = switch (currentStatus) {
-            case OPEN -> newStatus == TicketStatus.IN_PROGRESS || newStatus == TicketStatus.REJECTED;
-            case IN_PROGRESS -> newStatus == TicketStatus.RESOLVED;
+            case OPEN -> newStatus == TicketStatus.ASSIGNED || newStatus == TicketStatus.REJECTED;
+            case ASSIGNED -> newStatus == TicketStatus.WORKING_ON || newStatus == TicketStatus.DECLINED;
+            case WORKING_ON, IN_PROGRESS -> newStatus == TicketStatus.RESOLVED;
+            case DECLINED -> newStatus == TicketStatus.ASSIGNED || newStatus == TicketStatus.REJECTED;
             case RESOLVED -> newStatus == TicketStatus.CLOSED;
             default -> false;
         };
@@ -365,9 +465,12 @@ public class TicketServiceImpl implements TicketService {
                 .priority(ticket.getPriority())
                 .status(ticket.getStatus())
                 .reporter(mapUserToResponse(ticket.getReporter()))
+                .assignedTechnicianId(ticket.getAssignedTechnicianId())
+                .assignedTechnicianName(ticket.getAssignedTechnicianName())
                 .contactPhone(ticket.getContactPhone())
                 .contactEmail(ticket.getContactEmail())
                 .rejectionReason(ticket.getRejectionReason())
+                .technicianDeclineReason(ticket.getTechnicianDeclineReason())
                 .resolutionNotes(ticket.getResolutionNotes())
                 .resolvedAt(ticket.getResolvedAt())
                 .firstResponseAt(ticket.getFirstResponseAt())
@@ -412,10 +515,20 @@ public class TicketServiceImpl implements TicketService {
     }
 
     private CommentResponse mapCommentToResponse(Comment comment) {
+        UserResponse author = comment.getUser() != null
+                ? mapUserToResponse(comment.getUser())
+                : UserResponse.builder()
+                .id(comment.getTechnicianId())
+                .email(comment.getTechnicianEmail())
+                .name(comment.getTechnicianName())
+                .role(RoleName.TECHNICIAN)
+                .isActive(true)
+                .build();
+
         return CommentResponse.builder()
                 .id(comment.getId())
                 .ticketId(comment.getTicketId())
-                .user(mapUserToResponse(comment.getUser()))
+                .user(author)
                 .content(comment.getContent())
                 .isEdited(comment.getIsEdited())
                 .createdAt(comment.getCreatedAt())

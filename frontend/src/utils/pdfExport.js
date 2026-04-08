@@ -14,6 +14,9 @@ const STATUS_COLORS = {
   REJECTED: [185, 28, 28],
   CANCELLED: [107, 114, 128],
   OPEN: [37, 99, 235],
+  ASSIGNED: [67, 56, 202],
+  WORKING_ON: [180, 140, 0],
+  DECLINED: [225, 29, 72],
   IN_PROGRESS: [180, 140, 0],
   RESOLVED: [22, 128, 57],
   CLOSED: [107, 114, 128],
@@ -316,7 +319,16 @@ export function generateTicketReport(tickets, filters = {}) {
   const finalY = doc.lastAutoTable.finalY + 8;
 
   // Count by status
-  const statusCounts = { OPEN: 0, IN_PROGRESS: 0, RESOLVED: 0, CLOSED: 0, REJECTED: 0 };
+  const statusCounts = {
+    OPEN: 0,
+    ASSIGNED: 0,
+    WORKING_ON: 0,
+    DECLINED: 0,
+    IN_PROGRESS: 0,
+    RESOLVED: 0,
+    CLOSED: 0,
+    REJECTED: 0,
+  };
   const priorityCounts = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
   tickets.forEach((t) => {
     if (statusCounts[t.status] !== undefined) statusCounts[t.status]++;
@@ -334,6 +346,9 @@ export function generateTicketReport(tickets, filters = {}) {
   const statusItems = [
     { label: 'Total', value: tickets.length, color: SLIIT_DARK },
     { label: 'Open', value: statusCounts.OPEN, color: STATUS_COLORS.OPEN },
+    { label: 'Assigned', value: statusCounts.ASSIGNED, color: STATUS_COLORS.ASSIGNED },
+    { label: 'Working On', value: statusCounts.WORKING_ON, color: STATUS_COLORS.WORKING_ON },
+    { label: 'Declined', value: statusCounts.DECLINED, color: STATUS_COLORS.DECLINED },
     { label: 'In Progress', value: statusCounts.IN_PROGRESS, color: STATUS_COLORS.IN_PROGRESS },
     { label: 'Resolved', value: statusCounts.RESOLVED, color: STATUS_COLORS.RESOLVED },
     { label: 'Closed', value: statusCounts.CLOSED, color: STATUS_COLORS.CLOSED },

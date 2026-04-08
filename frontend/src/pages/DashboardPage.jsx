@@ -13,10 +13,6 @@ const DashboardPage = () => {
   const { unreadCount } = useNotificationStore();
   const [stats, setStats] = useState({ resources: '--', bookings: '--', tickets: '--' });
 
-  if (isAdmin) {
-    return <Navigate to="/admin" replace />;
-  }
-
   useEffect(() => {
     const fetchStats = async () => {
       const [r, b, t] = await Promise.allSettled([
@@ -32,6 +28,10 @@ const DashboardPage = () => {
     };
     fetchStats();
   }, []);
+
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
 
   const statCards = [
     { label: 'Active Resources', value: stats.resources, icon: Building2, color: 'bg-blue-100 text-blue-600', link: '/resources' },

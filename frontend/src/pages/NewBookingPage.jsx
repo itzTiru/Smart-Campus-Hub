@@ -78,18 +78,21 @@ const NewBookingPage = () => {
   const startTime = buildDateTime(form.startDate, form.startTimeSlot);
   const endTime = buildDateTime(form.endDate, form.endTimeSlot);
 
-  const handleCheckConflict = async () => {
-    if (!form.resourceId || !startTime || !endTime) return;
-    setCheckingConflict(true);
-    try {
-      const result = await checkConflicts(form.resourceId, startTime, endTime);
-      setConflict((result.data !== undefined ? result.data : result) === true);
-    } catch { setConflict(false); }
-    finally { setCheckingConflict(false); }
-  };
-
   useEffect(() => {
-    if (form.resourceId && startTime && endTime) handleCheckConflict();
+    const runConflictCheck = async () => {
+      if (!form.resourceId || !startTime || !endTime) return;
+      setCheckingConflict(true);
+      try {
+        const result = await checkConflicts(form.resourceId, startTime, endTime);
+        setConflict((result.data !== undefined ? result.data : result) === true);
+      } catch {
+        setConflict(false);
+      } finally {
+        setCheckingConflict(false);
+      }
+    };
+
+    runConflictCheck();
   }, [form.resourceId, startTime, endTime]);
 
   const handleSubmit = async (e) => {
