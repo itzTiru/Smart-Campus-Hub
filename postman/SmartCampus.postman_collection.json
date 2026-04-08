@@ -1,0 +1,562 @@
+{
+  "info": {
+    "name": "Smart Campus Operations Hub",
+    "description": "Complete API collection for IT3030 PAF Assignment 2026 — 44 REST endpoints across 5 modules.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" }
+  ],
+  "item": [
+    {
+      "name": "Module E — Authentication & Authorization",
+      "item": [
+        {
+          "name": "OAuth2 Google Login (browser)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "http://localhost:8080/oauth2/authorization/google",
+            "description": "Open in browser — redirects to Google login. After success, redirects to frontend with JWT token in URL."
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/auth/me",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout"
+          }
+        },
+        {
+          "name": "List All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/users"
+          }
+        },
+        {
+          "name": "Update User Role (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/users/{{userId}}/role",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"TECHNICIAN\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Toggle User Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/users/{{userId}}/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Module A — Facilities & Assets Catalogue",
+      "item": [
+        {
+          "name": "Create Resource (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/resources",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Lecture Hall A\",\n  \"type\": \"LECTURE_HALL\",\n  \"capacity\": 200,\n  \"location\": \"Block A, Floor 2\",\n  \"building\": \"Block A\",\n  \"floor\": \"2\",\n  \"description\": \"Large lecture hall with projector and audio system\",\n  \"availabilityStart\": \"08:00\",\n  \"availabilityEnd\": \"18:00\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["var json = pm.response.json();", "if (json.data && json.data.id) { pm.environment.set('resourceId', json.data.id); }"]
+            }
+          }]
+        },
+        {
+          "name": "List Resources (with filters)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/resources?type=LECTURE_HALL&status=ACTIVE&page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["resources"],
+              "query": [
+                { "key": "type", "value": "LECTURE_HALL", "disabled": true },
+                { "key": "status", "value": "ACTIVE", "disabled": true },
+                { "key": "minCapacity", "value": "50", "disabled": true },
+                { "key": "location", "value": "Block A", "disabled": true },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Resource by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/resources/{{resourceId}}"
+          }
+        },
+        {
+          "name": "Update Resource (Admin)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/resources/{{resourceId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Lecture Hall A (Updated)\",\n  \"type\": \"LECTURE_HALL\",\n  \"capacity\": 250,\n  \"location\": \"Block A, Floor 2\",\n  \"building\": \"Block A\",\n  \"floor\": \"2\",\n  \"description\": \"Updated description\",\n  \"availabilityStart\": \"07:00\",\n  \"availabilityEnd\": \"20:00\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Toggle Resource Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/resources/{{resourceId}}/status"
+          }
+        },
+        {
+          "name": "Search Resources",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/resources/search?keyword=lecture&page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["resources", "search"],
+              "query": [
+                { "key": "keyword", "value": "lecture" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Available Resources",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/resources/available?startTime=2026-04-10T09:00:00&endTime=2026-04-10T11:00:00",
+              "host": ["{{baseUrl}}"],
+              "path": ["resources", "available"],
+              "query": [
+                { "key": "startTime", "value": "2026-04-10T09:00:00" },
+                { "key": "endTime", "value": "2026-04-10T11:00:00" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Resource (Admin)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/resources/{{resourceId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Module B — Booking Management",
+      "item": [
+        {
+          "name": "Create Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceId\": {{resourceId}},\n  \"startTime\": \"2026-04-10T09:00:00\",\n  \"endTime\": \"2026-04-10T11:00:00\",\n  \"purpose\": \"Database Systems Lecture\",\n  \"expectedAttendees\": 150\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["var json = pm.response.json();", "if (json.data && json.data.id) { pm.environment.set('bookingId', json.data.id); }"]
+            }
+          }]
+        },
+        {
+          "name": "List All Bookings (with filters)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/bookings?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings"],
+              "query": [
+                { "key": "userId", "value": "1", "disabled": true },
+                { "key": "status", "value": "PENDING", "disabled": true },
+                { "key": "resourceId", "value": "1", "disabled": true },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Booking by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/bookings/{{bookingId}}"
+          }
+        },
+        {
+          "name": "Update Booking",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/bookings/{{bookingId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceId\": {{resourceId}},\n  \"startTime\": \"2026-04-10T14:00:00\",\n  \"endTime\": \"2026-04-10T16:00:00\",\n  \"purpose\": \"Updated: Software Engineering Lab\",\n  \"expectedAttendees\": 100\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Bookings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/bookings/my?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings", "my"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Bookings by Resource",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/bookings/resource/{{resourceId}}?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings", "resource", "{{resourceId}}"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check Conflicts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/bookings/conflicts?resourceId={{resourceId}}&startTime=2026-04-10T09:00:00&endTime=2026-04-10T11:00:00",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings", "conflicts"],
+              "query": [
+                { "key": "resourceId", "value": "{{resourceId}}" },
+                { "key": "startTime", "value": "2026-04-10T09:00:00" },
+                { "key": "endTime", "value": "2026-04-10T11:00:00" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Booking (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/bookings/{{bookingId}}/approve",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remarks\": \"Approved for scheduled lecture\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reject Booking (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/bookings/{{bookingId}}/reject",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remarks\": \"Resource is reserved for maintenance on this date\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/bookings/{{bookingId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Module C — Tickets & Comments",
+      "item": [
+        {
+          "name": "Create Ticket (multipart)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/tickets",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "ticket",
+                  "value": "{\n  \"title\": \"Projector not working\",\n  \"description\": \"The ceiling-mounted projector in Lab 3 shows no signal when connected via HDMI.\",\n  \"location\": \"Lab 3, Block B, Floor 1\",\n  \"category\": \"IT_EQUIPMENT\",\n  \"priority\": \"HIGH\",\n  \"contactPhone\": \"+94771234567\",\n  \"contactEmail\": \"user@campus.lk\",\n  \"resourceId\": 1\n}",
+                  "contentType": "application/json",
+                  "type": "text"
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": "",
+                  "disabled": true,
+                  "description": "Optional: up to 3 image files"
+                }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["var json = pm.response.json();", "if (json.data && json.data.id) { pm.environment.set('ticketId', json.data.id); }"]
+            }
+          }]
+        },
+        {
+          "name": "List Tickets (with filters)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/tickets?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets"],
+              "query": [
+                { "key": "reporterId", "value": "1", "disabled": true },
+                { "key": "assignedToId", "value": "2", "disabled": true },
+                { "key": "status", "value": "OPEN", "disabled": true },
+                { "key": "priority", "value": "HIGH", "disabled": true },
+                { "key": "category", "value": "IT_EQUIPMENT", "disabled": true },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Ticket by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/tickets/{{ticketId}}"
+          }
+        },
+        {
+          "name": "Update Ticket",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/tickets/{{ticketId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Projector not working (updated)\",\n  \"description\": \"Updated: tried different HDMI cable, still no signal.\",\n  \"location\": \"Lab 3, Block B, Floor 1\",\n  \"category\": \"IT_EQUIPMENT\",\n  \"priority\": \"CRITICAL\",\n  \"contactPhone\": \"+94771234567\",\n  \"contactEmail\": \"user@campus.lk\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Ticket Status (Admin/Tech)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/tickets/{{ticketId}}/status",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Resolve Ticket",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/tickets/{{ticketId}}/status",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"RESOLVED\",\n  \"resolutionNotes\": \"Replaced projector lamp. Working now.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Assign Technician (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}/assign?technicianId={{technicianId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}", "assign"],
+              "query": [{ "key": "technicianId", "value": "{{technicianId}}" }]
+            }
+          }
+        },
+        {
+          "name": "Upload Attachment",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/tickets/{{ticketId}}/attachments",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "", "description": "Image file (JPEG, PNG, GIF, WEBP)" }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["var json = pm.response.json();", "if (json.data && json.data.id) { pm.environment.set('attachmentId', json.data.id); }"]
+            }
+          }]
+        },
+        {
+          "name": "Download Attachment",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/tickets/{{ticketId}}/attachments/{{attachmentId}}"
+          }
+        },
+        {
+          "name": "Delete Attachment",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/tickets/{{ticketId}}/attachments/{{attachmentId}}"
+          }
+        },
+        {
+          "name": "Add Comment",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/tickets/{{ticketId}}/comments",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"I've checked the projector — the lamp needs replacement.\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["var json = pm.response.json();", "if (json.data && json.data.id) { pm.environment.set('commentId', json.data.id); }"]
+            }
+          }]
+        },
+        {
+          "name": "Update Comment",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/tickets/{{ticketId}}/comments/{{commentId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated: ordered a replacement lamp, arriving tomorrow.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Comment",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/tickets/{{ticketId}}/comments/{{commentId}}"
+          }
+        },
+        {
+          "name": "Delete Ticket",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/tickets/{{ticketId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Module D — Notifications",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/notifications?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications/unread-count"
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/notifications/{{notificationId}}/read"
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/notifications/read-all"
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/notifications/{{notificationId}}"
+          }
+        }
+      ]
+    }
+  ]
+}
