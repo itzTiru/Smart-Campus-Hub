@@ -36,6 +36,7 @@ const ResourceDetailPage = () => {
     } finally { setLoading(false); }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchResource(); }, [id]);
 
   const handleUpdate = async (e) => {

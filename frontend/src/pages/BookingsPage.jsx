@@ -36,6 +36,7 @@ const BookingsPage = () => {
     } finally { setLoading(false); }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchBookings(); }, [page, statusFilter, isAdmin]);
 
   const handleCancel = async (id) => {
