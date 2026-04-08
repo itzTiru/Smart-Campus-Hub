@@ -47,7 +47,7 @@ class NotificationCommentServiceTest {
 
     @Mock private CommentRepository commentRepository;
     @Mock private TicketRepository ticketRepository;
-    @Mock private UserRepository userRepository2;
+    @Mock private TechnicianRepository technicianRepository;
     @Mock private NotificationService notificationServiceMock;
 
     private User user;
@@ -159,7 +159,7 @@ class NotificationCommentServiceTest {
     @DisplayName("Comment service should add comment and notify ticket reporter")
     void addComment_NotifiesReporter() {
         CommentServiceImpl commentService = new CommentServiceImpl(
-                commentRepository, ticketRepository, userRepository, notificationServiceMock);
+                commentRepository, ticketRepository, userRepository, technicianRepository, notificationServiceMock);
 
         when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
         when(userRepository.findById("u2")).thenReturn(Optional.of(otherUser));
@@ -168,7 +168,7 @@ class NotificationCommentServiceTest {
         );
 
         CommentResponse response = commentService.addComment("t1",
-                CommentRequest.builder().content("reply").build(), "u2");
+                CommentRequest.builder().content("reply").build(), "u2", "USER");
 
         assertThat(response).isNotNull();
         assertThat(response.getContent()).isEqualTo("reply");
@@ -180,13 +180,13 @@ class NotificationCommentServiceTest {
     @DisplayName("Comment service should NOT notify when reporter comments on own ticket")
     void addComment_NoSelfNotification() {
         CommentServiceImpl commentService = new CommentServiceImpl(
-                commentRepository, ticketRepository, userRepository, notificationServiceMock);
+                commentRepository, ticketRepository, userRepository, technicianRepository, notificationServiceMock);
 
         when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
         when(userRepository.findById("u1")).thenReturn(Optional.of(user));
         when(commentRepository.save(any(Comment.class))).thenReturn(comment);
 
-        commentService.addComment("t1", CommentRequest.builder().content("self comment").build(), "u1");
+        commentService.addComment("t1", CommentRequest.builder().content("self comment").build(), "u1", "USER");
 
         verify(notificationServiceMock, never()).sendNotification(anyString(), any(), any(), any(), any(), any());
     }
@@ -195,14 +195,14 @@ class NotificationCommentServiceTest {
     @DisplayName("Comment service should allow owner to edit comment")
     void updateComment_OwnerSuccess() {
         CommentServiceImpl commentService = new CommentServiceImpl(
-                commentRepository, ticketRepository, userRepository, notificationServiceMock);
+                commentRepository, ticketRepository, userRepository, technicianRepository, notificationServiceMock);
 
         when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
         when(commentRepository.findById("c1")).thenReturn(Optional.of(comment));
         when(commentRepository.save(any(Comment.class))).thenReturn(comment);
 
-        CommentResponse response = commentService.updateComment("t1", "c1",
-                CommentRequest.builder().content("edited").build(), "u1");
+        commentService.updateComment("t1", "c1",
+                CommentRequest.builder().content("edited").build(), "u1", "USER");
 
         assertThat(comment.getIsEdited()).isTrue();
     }
@@ -211,13 +211,13 @@ class NotificationCommentServiceTest {
     @DisplayName("Comment service should reject edit from non-owner")
     void updateComment_NonOwner() {
         CommentServiceImpl commentService = new CommentServiceImpl(
-                commentRepository, ticketRepository, userRepository, notificationServiceMock);
+                commentRepository, ticketRepository, userRepository, technicianRepository, notificationServiceMock);
 
         when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
         when(commentRepository.findById("c1")).thenReturn(Optional.of(comment));
 
         assertThatThrownBy(() -> commentService.updateComment("t1", "c1",
-                CommentRequest.builder().content("hacked").build(), "u99"))
+                CommentRequest.builder().content("hacked").build(), "u99", "USER"))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
@@ -225,12 +225,12 @@ class NotificationCommentServiceTest {
     @DisplayName("Comment service should allow admin to delete any comment")
     void deleteComment_AdminSuccess() {
         CommentServiceImpl commentService = new CommentServiceImpl(
-                commentRepository, ticketRepository, userRepository, notificationServiceMock);
+                commentRepository, ticketRepository, userRepository, technicianRepository, notificationServiceMock);
 
         when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
         when(commentRepository.findById("c1")).thenReturn(Optional.of(comment));
 
-        commentService.deleteComment("t1", "c1", "u99", true);
+        commentService.deleteComment("t1", "c1", "u99", "USER", true);
 
         verify(commentRepository).delete(comment);
     }
@@ -239,12 +239,12 @@ class NotificationCommentServiceTest {
     @DisplayName("Comment service should reject delete from non-owner non-admin")
     void deleteComment_Unauthorized() {
         CommentServiceImpl commentService = new CommentServiceImpl(
-                commentRepository, ticketRepository, userRepository, notificationServiceMock);
+                commentRepository, ticketRepository, userRepository, technicianRepository, notificationServiceMock);
 
         when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
         when(commentRepository.findById("c1")).thenReturn(Optional.of(comment));
 
-        assertThatThrownBy(() -> commentService.deleteComment("t1", "c1", "u99", false))
+        assertThatThrownBy(() -> commentService.deleteComment("t1", "c1", "u99", "USER", false))
                 .isInstanceOf(UnauthorizedException.class);
     }
 }

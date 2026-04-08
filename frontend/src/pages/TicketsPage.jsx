@@ -47,6 +47,7 @@ const TicketsPage = () => {
     } finally { setLoading(false); }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchTickets(); }, [page, statusFilter, priorityFilter, categoryFilter]);
 
   const [pdfLoading, setPdfLoading] = useState(false);

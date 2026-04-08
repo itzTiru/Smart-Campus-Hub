@@ -85,6 +85,9 @@ const LoginPage = () => {
         <p className="mt-6 text-center text-xs text-gray-400 dark:text-gray-500">
           Use your university Google account to sign in
         </p>
+        <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
+          Technician: <a href="/technician/login" className="text-blue-600 hover:underline">Login</a> or <a href="/technician/register" className="text-blue-600 hover:underline">Register</a>
+        </p>
       </div>
     </div>
   );

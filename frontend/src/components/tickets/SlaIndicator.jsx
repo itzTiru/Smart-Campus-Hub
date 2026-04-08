@@ -73,7 +73,11 @@ function SlaMetric({ label, hours, type, isLive }) {
 export default function SlaIndicator({ createdAt, firstResponseAt, resolvedAt, status }) {
   const [now, setNow] = useState(new Date());
 
-  const isActive = status === 'OPEN' || status === 'IN_PROGRESS';
+  const isActive =
+    status === 'OPEN' ||
+    status === 'ASSIGNED' ||
+    status === 'WORKING_ON' ||
+    status === 'IN_PROGRESS';
 
   useEffect(() => {
     if (!isActive) return;
@@ -119,7 +123,11 @@ export default function SlaIndicator({ createdAt, firstResponseAt, resolvedAt, s
  */
 export function SlaDot({ createdAt, firstResponseAt, status }) {
   const [now, setNow] = useState(new Date());
-  const isActive = status === 'OPEN' || status === 'IN_PROGRESS';
+  const isActive =
+    status === 'OPEN' ||
+    status === 'ASSIGNED' ||
+    status === 'WORKING_ON' ||
+    status === 'IN_PROGRESS';
 
   useEffect(() => {
     if (!isActive) return;
