@@ -17,14 +17,13 @@ const BookingsPage = () => {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [statusFilter, setStatusFilter] = useState('');
-  const [viewAll, setViewAll] = useState(false);
 
   const fetchBookings = async () => {
     setLoading(true);
     setError(null);
     try {
       let result;
-      if (isAdmin && viewAll) {
+      if (isAdmin) {
         result = await getBookings({ status: statusFilter || undefined, page, size: 10 });
       } else {
         result = await getMyBookings(page, 10);
@@ -37,7 +36,7 @@ const BookingsPage = () => {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchBookings(); }, [page, statusFilter, viewAll]);
+  useEffect(() => { fetchBookings(); }, [page, statusFilter, isAdmin]);
 
   const handleCancel = async (id) => {
     if (!confirm('Cancel this booking?')) return;
@@ -52,14 +51,14 @@ const BookingsPage = () => {
     try {
       // Fetch all bookings (large page size) for the report
       let result;
-      if (isAdmin && viewAll) {
+      if (isAdmin) {
         result = await getBookings({ status: statusFilter || undefined, page: 0, size: 1000 });
       } else {
         result = await getMyBookings(0, 1000);
       }
       const data = result.data || result;
       const allBookings = data.content || [];
-      generateBookingReport(allBookings, { status: statusFilter, viewAll });
+      generateBookingReport(allBookings, { status: statusFilter, viewAll: isAdmin });
     } catch (err) {
       alert('Failed to generate PDF: ' + (err.message || 'Unknown error'));
     } finally { setPdfLoading(false); }
@@ -89,18 +88,14 @@ const BookingsPage = () => {
             </button>
           </div>
         )}
-        <Link to="/bookings/new" className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700">
-          <Plus className="h-4 w-4" /> New Booking
-        </Link>
+        {!isAdmin && (
+          <Link to="/bookings/new" className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700">
+            <Plus className="h-4 w-4" /> New Booking
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-3">
-        {isAdmin && (
-          <div className="flex rounded-lg border border-gray-300 text-sm">
-            <button onClick={() => { setViewAll(false); setPage(0); }} className={`px-3 py-2 ${!viewAll ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'}`}>My Bookings</button>
-            <button onClick={() => { setViewAll(true); setPage(0); }} className={`px-3 py-2 ${viewAll ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'}`}>All Bookings</button>
-          </div>
-        )}
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
           <option value="">All Status</option>
           {Object.entries(BOOKING_STATUS).map(([key, val]) => <option key={key} value={key}>{val.label}</option>)}
@@ -142,7 +137,7 @@ const BookingsPage = () => {
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <Link to={`/bookings/${b.id}`} className="text-blue-600 hover:underline text-sm">View</Link>
-                        {(b.status === 'PENDING' || b.status === 'APPROVED') && (
+                        {!isAdmin && (b.status === 'PENDING' || b.status === 'APPROVED') && (
                           <button onClick={() => handleCancel(b.id)} className="text-red-600 hover:underline text-sm">Cancel</button>
                         )}
                       </div>

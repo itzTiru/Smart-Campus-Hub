@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { Building2, Calendar, Wrench, Bell, Plus, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useNotificationStore } from '../store/notificationStore';
@@ -9,8 +9,13 @@ import { getTickets } from '../api/ticketApi';
 
 const DashboardPage = () => {
   const { user } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
   const { unreadCount } = useNotificationStore();
   const [stats, setStats] = useState({ resources: '--', bookings: '--', tickets: '--' });
+
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
 
   useEffect(() => {
     const fetchStats = async () => {

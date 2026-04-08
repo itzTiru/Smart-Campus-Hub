@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { ArrowLeft, Upload, X } from 'lucide-react';
 import { createTicket } from '../api/ticketApi';
 import { getResources } from '../api/resourceApi';
 import { TICKET_CATEGORIES, PRIORITY } from '../utils/constants';
+import { useAuthStore } from '../store/authStore';
 
 const NewTicketPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
   const [resources, setResources] = useState([]);
   const [form, setForm] = useState({
     title: '', description: '', resourceId: '', location: '',
@@ -50,6 +53,10 @@ const NewTicketPage = () => {
       setError(err.response?.data?.message || 'Failed to create ticket');
     } finally { setSubmitting(false); }
   };
+
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
 
   return (
     <div className="space-y-4">
