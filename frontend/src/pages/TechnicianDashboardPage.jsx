@@ -367,18 +367,18 @@ const TechnicianDashboardPage = () => {
 
                     <div className="mt-3 rounded-lg border border-gray-100 p-3 dark:border-gray-700">
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                        Ticket Chat
+                        Messages
                       </p>
                       <div className="mb-2 max-h-40 space-y-2 overflow-y-auto">
                         {(ticket.comments || []).length === 0 ? (
                           <p className="text-xs text-gray-500 dark:text-gray-400">No messages yet.</p>
                         ) : (
                           (ticket.comments || []).map((comment) => (
-                            <div key={comment.id} className="rounded-md bg-gray-50 p-2 text-xs dark:bg-gray-800">
-                              <p className="font-medium text-gray-700 dark:text-gray-200">
+                            <div key={comment.id} className="rounded-md border border-gray-200 bg-gray-50 p-2 text-xs dark:border-gray-700 dark:bg-gray-900">
+                              <p className="font-medium text-gray-700 dark:text-gray-100">
                                 {comment.user?.name || 'Unknown'}
                               </p>
-                              <p className="text-gray-600 dark:text-gray-300">{comment.content}</p>
+                              <p className="text-gray-600 dark:text-gray-200">{comment.content}</p>
                             </div>
                           ))
                         )}
