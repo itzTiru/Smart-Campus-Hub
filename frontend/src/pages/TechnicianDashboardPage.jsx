@@ -99,6 +99,24 @@ const TechnicianDashboardPage = () => {
     fetchTickets();
   }, [fetchTickets]);
 
+  useEffect(() => {
+    if (!isAuthenticatedTechnician) {
+      return undefined;
+    }
+
+    const keepTechnicianOnDashboard = () => {
+      window.history.pushState(null, '', window.location.href);
+    };
+
+    // Keep the technician dashboard as the active browser-history entry.
+    keepTechnicianOnDashboard();
+    window.addEventListener('popstate', keepTechnicianOnDashboard);
+
+    return () => {
+      window.removeEventListener('popstate', keepTechnicianOnDashboard);
+    };
+  }, [isAuthenticatedTechnician]);
+
   const activeJobsCount = useMemo(
     () => tickets.filter((t) => ['ASSIGNED', 'WORKING_ON', 'IN_PROGRESS'].includes(t.status)).length,
     [tickets]

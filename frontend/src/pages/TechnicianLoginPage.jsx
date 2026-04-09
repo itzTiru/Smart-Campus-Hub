@@ -24,7 +24,7 @@ const TechnicianLoginPage = () => {
       if (technician) localStorage.setItem('technician_user', JSON.stringify(technician));
 
       setSuccess('Technician login successful.');
-      setTimeout(() => navigate('/technician/dashboard'), 500);
+      setTimeout(() => navigate('/technician/dashboard', { replace: true }), 500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to login');
     } finally {
