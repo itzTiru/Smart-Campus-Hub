@@ -179,15 +179,15 @@ public class TicketServiceImpl implements TicketService {
     }
 
     @Override
-    public void deleteTicket(String id, String userId) {
+    public void deleteTicket(String id, String userId, boolean isAdmin) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", id));
 
-        if (!ticket.getReporter().getId().equals(userId)) {
+        if (!isAdmin && !ticket.getReporter().getId().equals(userId)) {
             throw new UnauthorizedException("You can only delete your own tickets");
         }
 
-        if (ticket.getStatus() != TicketStatus.OPEN) {
+        if (!isAdmin && ticket.getStatus() != TicketStatus.OPEN) {
             throw new BadRequestException("Only tickets with OPEN status can be deleted");
         }
 

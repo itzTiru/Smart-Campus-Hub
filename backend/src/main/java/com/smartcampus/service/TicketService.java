@@ -27,7 +27,7 @@ public interface TicketService {
 
     TicketResponse updateTicket(String id, TicketRequest request, String userId);
 
-    void deleteTicket(String id, String userId);
+    void deleteTicket(String id, String userId, boolean isAdmin);
 
     TicketResponse updateTicketStatus(String id, TicketStatusUpdateRequest request, String userId);
 

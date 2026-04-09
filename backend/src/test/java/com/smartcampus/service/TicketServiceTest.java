@@ -209,7 +209,7 @@ class TicketServiceTest {
         when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
         when(ticketAttachmentRepository.findByTicketId("t1")).thenReturn(Collections.emptyList());
 
-        ticketService.deleteTicket("t1", "u1");
+        ticketService.deleteTicket("t1", "u1", false);
 
         verify(ticketRepository).delete(ticket);
     }
@@ -219,8 +219,20 @@ class TicketServiceTest {
     void deleteTicket_Unauthorized() {
         when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
 
-        assertThatThrownBy(() -> ticketService.deleteTicket("t1", "u99"))
+        assertThatThrownBy(() -> ticketService.deleteTicket("t1", "u99", false))
                 .isInstanceOf(UnauthorizedException.class);
+    }
+
+    @Test
+    @DisplayName("Admin should delete any ticket regardless of status")
+    void deleteTicket_AdminSuccess() {
+        ticket.setStatus(TicketStatus.RESOLVED);
+        when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
+        when(ticketAttachmentRepository.findByTicketId("t1")).thenReturn(Collections.emptyList());
+
+        ticketService.deleteTicket("t1", "admin-id", true);
+
+        verify(ticketRepository).delete(ticket);
     }
 
     @Test
@@ -229,7 +241,7 @@ class TicketServiceTest {
         ticket.setStatus(TicketStatus.RESOLVED);
         when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
 
-        assertThatThrownBy(() -> ticketService.deleteTicket("t1", "u1"))
+        assertThatThrownBy(() -> ticketService.deleteTicket("t1", "u1", false))
                 .isInstanceOf(BadRequestException.class);
     }
 }

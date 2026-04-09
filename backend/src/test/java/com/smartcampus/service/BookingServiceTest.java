@@ -141,7 +141,7 @@ class BookingServiceTest {
     void cancelBooking_Success() {
         when(bookingRepository.findById("b1")).thenReturn(Optional.of(booking));
 
-        bookingService.cancelBooking("b1", "u1");
+        bookingService.cancelBooking("b1", "u1", false);
 
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.CANCELLED);
         verify(bookingRepository).save(booking);
@@ -152,8 +152,19 @@ class BookingServiceTest {
     void cancelBooking_Unauthorized() {
         when(bookingRepository.findById("b1")).thenReturn(Optional.of(booking));
 
-        assertThatThrownBy(() -> bookingService.cancelBooking("b1", "u99"))
+        assertThatThrownBy(() -> bookingService.cancelBooking("b1", "u99", false))
                 .isInstanceOf(UnauthorizedException.class);
+    }
+
+    @Test
+    @DisplayName("Admin should cancel any booking")
+    void cancelBooking_AdminSuccess() {
+        when(bookingRepository.findById("b1")).thenReturn(Optional.of(booking));
+
+        bookingService.cancelBooking("b1", "admin-id", true);
+
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.CANCELLED);
+        verify(bookingRepository).save(booking);
     }
 
     @Test
@@ -162,7 +173,7 @@ class BookingServiceTest {
         booking.setStatus(BookingStatus.CANCELLED);
         when(bookingRepository.findById("b1")).thenReturn(Optional.of(booking));
 
-        assertThatThrownBy(() -> bookingService.cancelBooking("b1", "u1"))
+        assertThatThrownBy(() -> bookingService.cancelBooking("b1", "u1", false))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("already cancelled");
     }
@@ -173,7 +184,7 @@ class BookingServiceTest {
         booking.setStatus(BookingStatus.REJECTED);
         when(bookingRepository.findById("b1")).thenReturn(Optional.of(booking));
 
-        assertThatThrownBy(() -> bookingService.cancelBooking("b1", "u1"))
+        assertThatThrownBy(() -> bookingService.cancelBooking("b1", "u1", false))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("rejected");
     }

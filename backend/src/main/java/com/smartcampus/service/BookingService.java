@@ -17,9 +17,11 @@ public interface BookingService {
 
     BookingResponse getBookingById(String id);
 
-    BookingResponse updateBooking(String id, BookingRequest request, String userId);
+    BookingResponse updateBooking(String id, BookingRequest request, String userId, boolean isAdmin);
 
-    void cancelBooking(String id, String userId);
+    void cancelBooking(String id, String userId, boolean isAdmin);
+
+    void deleteBooking(String id);
 
     BookingResponse approveBooking(String id, BookingReviewRequest request, String adminId);
 
