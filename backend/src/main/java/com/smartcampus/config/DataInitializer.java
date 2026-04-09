@@ -284,7 +284,7 @@ public class DataInitializer implements CommandLineRunner {
                 userRepository.save(User.builder()
                         .email(email).name(name)
                         .oauthProviderId(providerId).oauthProvider("google")
-                        .role(role).isActive(true).build()));
+                        .role(role).isActive(true).isApproved(true).build()));
     }
 
     private Resource saveResource(String name, ResourceType type, Integer capacity,

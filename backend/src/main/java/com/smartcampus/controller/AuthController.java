@@ -1,6 +1,9 @@
 package com.smartcampus.controller;
 
+import com.smartcampus.dto.request.LoginRequest;
+import com.smartcampus.dto.request.SignupRequest;
 import com.smartcampus.dto.response.ApiResponse;
+import com.smartcampus.dto.response.AuthResponse;
 import com.smartcampus.dto.response.UserResponse;
 import com.smartcampus.entity.Role;
 import com.smartcampus.entity.User;
@@ -10,6 +13,7 @@ import com.smartcampus.repository.UserRepository;
 import com.smartcampus.security.JwtTokenProvider;
 import com.smartcampus.security.UserPrincipal;
 import com.smartcampus.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,6 +30,18 @@ public class AuthController {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final JwtTokenProvider jwtTokenProvider;
+
+    @PostMapping("/signup")
+    public ResponseEntity<ApiResponse<UserResponse>> signup(@Valid @RequestBody SignupRequest request) {
+        UserResponse user = userService.signup(request);
+        return ResponseEntity.ok(ApiResponse.success("Account created successfully. Please wait for admin approval", user));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+        AuthResponse authResponse = userService.login(request);
+        return ResponseEntity.ok(ApiResponse.success("Login successful", authResponse));
+    }
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser(
@@ -68,6 +84,7 @@ public class AuthController {
                         .oauthProvider("dev")
                         .role(userRole)
                         .isActive(true)
+                        .isApproved(true)
                         .build()));
 
         UserPrincipal principal = new UserPrincipal(user, Map.of());

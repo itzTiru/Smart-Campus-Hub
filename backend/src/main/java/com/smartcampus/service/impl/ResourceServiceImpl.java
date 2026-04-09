@@ -255,6 +255,7 @@ public class ResourceServiceImpl implements ResourceService {
                 .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole().getName())
                 .isActive(user.getIsActive())
+                .isApproved(Boolean.TRUE.equals(user.getIsApproved()))
                 .createdAt(user.getCreatedAt())
                 .build();
     }

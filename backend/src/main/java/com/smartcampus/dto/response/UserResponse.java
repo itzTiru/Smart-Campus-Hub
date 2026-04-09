@@ -15,5 +15,6 @@ public class UserResponse {
     private String avatarUrl;
     private RoleName role;
     private Boolean isActive;
+    private Boolean isApproved;
     private LocalDateTime createdAt;
 }
