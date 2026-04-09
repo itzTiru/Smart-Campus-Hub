@@ -18,6 +18,8 @@ export const useAuthStore = create((set) => ({
 
   logout: () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('technician_token');
+    localStorage.removeItem('technician_user');
     set({ user: null, token: null, isAuthenticated: false, isLoading: false });
   },
 
@@ -29,6 +31,8 @@ export const useAuthStore = create((set) => ({
       set({ user, isAuthenticated: true, isLoading: false });
     } catch {
       localStorage.removeItem('token');
+      localStorage.removeItem('technician_token');
+      localStorage.removeItem('technician_user');
       set({ user: null, token: null, isAuthenticated: false, isLoading: false });
     }
   },

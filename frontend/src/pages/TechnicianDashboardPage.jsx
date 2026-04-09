@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
 import {
   Wrench,
   ClipboardList,
@@ -17,13 +18,16 @@ import {
   addTechnicianComment,
 } from '../api/technicianTicketApi';
 import { TICKET_STATUS, TICKET_CATEGORIES, PRIORITY } from '../utils/constants';
+import TechnicianProfileCompletionModal from '../components/TechnicianProfileCompletionModal';
 
 const TechnicianDashboardPage = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('technician_token');
   const [technician, setTechnician] = useState(() => {
-    const raw = localStorage.getItem('technician_user');
-    return raw ? JSON.parse(raw) : null;
+    try {
+      const raw = localStorage.getItem('technician_user');
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
   });
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,11 +38,22 @@ const TechnicianDashboardPage = () => {
   const [commentDrafts, setCommentDrafts] = useState({});
   const [error, setError] = useState('');
   const isAuthenticatedTechnician = Boolean(token && technician);
+  const [showProfileModal, setShowProfileModal] = useState(() => {
+    if (!technician) return false;
+    const noPhone = !technician.phone || technician.phone === '' || technician.phone === '+94';
+    const noSpecialty = !technician.specialtyCategory || technician.specialtyCategory === 'OTHER';
+    return noPhone || noSpecialty;
+  });
+
+  const handleProfileComplete = (updated) => {
+    setTechnician(updated);
+    localStorage.setItem('technician_user', JSON.stringify(updated));
+    setShowProfileModal(false);
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem('technician_token');
-    localStorage.removeItem('technician_user');
-    navigate('/technician/login', { replace: true });
+    useAuthStore.getState().logout();
+    navigate('/login', { replace: true });
   };
 
   const fetchTickets = useCallback(async () => {
@@ -90,7 +105,7 @@ const TechnicianDashboardPage = () => {
   );
 
   if (!isAuthenticatedTechnician) {
-    return <Navigate to="/technician/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   const handleAccept = async (ticketId) => {
@@ -189,6 +204,12 @@ const TechnicianDashboardPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-8 dark:bg-gray-900">
+      {showProfileModal && (
+        <TechnicianProfileCompletionModal
+          technician={technician}
+          onComplete={handleProfileComplete}
+        />
+      )}
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -221,10 +242,18 @@ const TechnicianDashboardPage = () => {
 
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-            <h2 className="mb-3 inline-flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
-              <UserCircle className="h-5 w-5 text-blue-600" />
-              Profile
-            </h2>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <UserCircle className="h-5 w-5 text-blue-600" />
+                Profile
+              </h2>
+              <button
+                onClick={() => setShowProfileModal(true)}
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Edit
+              </button>
+            </div>
             <div className="grid gap-2 text-sm text-gray-700 dark:text-gray-300">
               <p><span className="text-gray-500">Name:</span> {technician.fullName}</p>
               <p><span className="text-gray-500">Username:</span> {technician.username}</p>

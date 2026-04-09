@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { technicianBridge } from '../api/authApi';
 
 const OAuth2RedirectHandler = () => {
   const [searchParams] = useSearchParams();
@@ -13,9 +14,21 @@ const OAuth2RedirectHandler = () => {
 
     if (token) {
       localStorage.setItem('token', token);
-      useAuthStore.setState({ token, isAuthenticated: true });
       checkAuth()
-        .then(() => navigate('/', { replace: true }))
+        .then(async () => {
+          const user = useAuthStore.getState().user;
+          if (user?.role === 'TECHNICIAN') {
+            try {
+              const bridgeRes = await technicianBridge();
+              const { token: techToken, technician } = bridgeRes.data;
+              localStorage.setItem('technician_token', techToken);
+              localStorage.setItem('technician_user', JSON.stringify(technician));
+              navigate('/technician/dashboard', { replace: true });
+              return;
+            } catch { /* fall through */ }
+          }
+          navigate('/', { replace: true });
+        })
         .catch(() => {
           setError('Authentication failed. Please try again.');
           setTimeout(() => navigate('/login', { replace: true }), 2000);

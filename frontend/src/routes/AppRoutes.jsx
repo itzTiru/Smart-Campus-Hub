@@ -22,6 +22,9 @@ const LoginPage = React.lazy(() => import('../pages/LoginPage'));
 const SignupPage = React.lazy(() => import('../pages/SignupPage'));
 const OAuth2RedirectHandler = React.lazy(() => import('../pages/OAuth2RedirectHandler'));
 const NotificationPreferences = React.lazy(() => import('../pages/NotificationPreferences'));
+const TechnicianLoginPage = React.lazy(() => import('../pages/TechnicianLoginPage'));
+const TechnicianRegisterPage = React.lazy(() => import('../pages/TechnicianRegisterPage'));
+const TechnicianDashboardPage = React.lazy(() => import('../pages/TechnicianDashboardPage'));
 const NotFoundPage = React.lazy(() => import('../pages/NotFoundPage'));
 
 const PageLoader = () => (
@@ -59,6 +62,9 @@ const AppRoutes = () => {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/pending-approval" element={<PendingApprovalPage />} />
         <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
+        <Route path="/technician/login" element={<TechnicianLoginPage />} />
+        <Route path="/technician/register" element={<TechnicianRegisterPage />} />
+        <Route path="/technician/dashboard" element={<TechnicianDashboardPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
