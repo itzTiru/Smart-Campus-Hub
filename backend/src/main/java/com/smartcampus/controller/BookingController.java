@@ -58,7 +58,7 @@ public class BookingController {
             @PathVariable String id,
             @Valid @RequestBody BookingRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        BookingResponse booking = bookingService.updateBooking(id, request, principal.getUser().getId());
+        BookingResponse booking = bookingService.updateBooking(id, request, principal.getUser().getId(), principal.hasRole("ADMIN"));
         return ResponseEntity.ok(ApiResponse.success("Booking updated successfully", booking));
     }
 
@@ -66,9 +66,17 @@ public class BookingController {
     public ResponseEntity<ApiResponse<Void>> cancelBooking(
             @PathVariable String id,
             @AuthenticationPrincipal UserPrincipal principal) {
-        bookingService.cancelBooking(id, principal.getUser().getId());
+        bookingService.cancelBooking(id, principal.getUser().getId(), principal.hasRole("ADMIN"));
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .body(ApiResponse.success("Booking cancelled successfully", null));
+    }
+
+    @DeleteMapping("/{id}/permanent")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteBooking(@PathVariable String id) {
+        bookingService.deleteBooking(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                .body(ApiResponse.success("Booking deleted permanently", null));
     }
 
     @PatchMapping("/{id}/approve")

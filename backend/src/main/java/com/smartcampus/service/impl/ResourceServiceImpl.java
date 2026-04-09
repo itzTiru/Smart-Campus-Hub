@@ -155,6 +155,7 @@ public class ResourceServiceImpl implements ResourceService {
     public List<ResourceResponse> getAvailableResources(LocalDateTime startTime, LocalDateTime endTime) {
         List<Booking> conflicting = bookingRepository.findAllConflictingInRange(startTime, endTime);
         List<String> excludedIds = conflicting.stream()
+                .filter(b -> b.getResource() != null)
                 .map(b -> b.getResource().getId())
                 .distinct()
                 .collect(Collectors.toList());

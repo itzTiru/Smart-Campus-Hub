@@ -2,6 +2,7 @@ package com.smartcampus.controller;
 
 import com.smartcampus.dto.request.TechnicianAssignmentResponseRequest;
 import com.smartcampus.dto.request.TechnicianMarkDoneRequest;
+import com.smartcampus.dto.request.TechnicianProfileUpdateRequest;
 import com.smartcampus.dto.response.ApiResponse;
 import com.smartcampus.dto.response.PagedResponse;
 import com.smartcampus.dto.response.TechnicianResponse;
@@ -62,6 +63,26 @@ public class TechnicianController {
                 .toList();
 
         return ResponseEntity.ok(ApiResponse.success("Technicians retrieved successfully", response));
+    }
+
+    @PatchMapping("/me")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    public ResponseEntity<ApiResponse<TechnicianResponse>> updateMyProfile(
+            @Valid @RequestBody TechnicianProfileUpdateRequest request,
+            @AuthenticationPrincipal Technician technician) {
+
+        if (request.getPhone() != null) {
+            technician.setPhone(request.getPhone());
+        }
+        if (request.getSpecialtyCategory() != null) {
+            technician.setSpecialtyCategory(request.getSpecialtyCategory());
+        }
+        if (request.getYearsOfExperience() != null) {
+            technician.setYearsOfExperience(request.getYearsOfExperience());
+        }
+
+        Technician updated = technicianRepository.save(technician);
+        return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", mapToResponse(updated)));
     }
 
     @GetMapping("/me/tickets")

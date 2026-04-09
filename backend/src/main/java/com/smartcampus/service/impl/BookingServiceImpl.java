@@ -152,11 +152,11 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public BookingResponse updateBooking(String id, BookingRequest request, String userId) {
+    public BookingResponse updateBooking(String id, BookingRequest request, String userId, boolean isAdmin) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
 
-        if (!booking.getUser().getId().equals(userId)) {
+        if (!isAdmin && !booking.getUser().getId().equals(userId)) {
             throw new UnauthorizedException("You can only update your own bookings");
         }
 
@@ -228,11 +228,11 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public void cancelBooking(String id, String userId) {
+    public void cancelBooking(String id, String userId, boolean isAdmin) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
 
-        if (!booking.getUser().getId().equals(userId)) {
+        if (!isAdmin && !booking.getUser().getId().equals(userId)) {
             throw new UnauthorizedException("You can only cancel your own bookings");
         }
 
@@ -249,12 +249,24 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    public void deleteBooking(String id) {
+        if (!bookingRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Booking", "id", id);
+        }
+        bookingRepository.deleteById(id);
+    }
+
+    @Override
     public BookingResponse approveBooking(String id, BookingReviewRequest request, String adminId) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
 
         if (booking.getStatus() != BookingStatus.PENDING) {
             throw new BadRequestException("Only pending bookings can be approved");
+        }
+
+        if (booking.getResource() == null) {
+            throw new BadRequestException("Cannot approve: the linked resource no longer exists");
         }
 
         List<Booking> conflicts = bookingRepository.findConflictingBookingsExcluding(
@@ -280,11 +292,11 @@ public class BookingServiceImpl implements BookingService {
 
         Booking updated = bookingRepository.save(booking);
 
-        notificationService.sendNotification(
+        if (booking.getUser() != null) notificationService.sendNotification(
                 booking.getUser().getId(),
                 NotificationType.BOOKING_APPROVED,
                 "Booking Approved",
-                "Your booking for " + booking.getResource().getName() + " has been approved.",
+                "Your booking for " + (booking.getResource() != null ? booking.getResource().getName() : "a resource") + " has been approved.",
                 "BOOKING",
                 booking.getId()
         );
@@ -311,11 +323,11 @@ public class BookingServiceImpl implements BookingService {
 
         Booking updated = bookingRepository.save(booking);
 
-        notificationService.sendNotification(
+        if (booking.getUser() != null) notificationService.sendNotification(
                 booking.getUser().getId(),
                 NotificationType.BOOKING_REJECTED,
                 "Booking Rejected",
-                "Your booking for " + booking.getResource().getName() + " has been rejected."
+                "Your booking for " + (booking.getResource() != null ? booking.getResource().getName() : "a resource") + " has been rejected."
                         + (request.getRemarks() != null ? " Reason: " + request.getRemarks() : ""),
                 "BOOKING",
                 booking.getId()
@@ -401,8 +413,8 @@ public class BookingServiceImpl implements BookingService {
     private BookingResponse mapToResponse(Booking booking) {
         return BookingResponse.builder()
                 .id(booking.getId())
-                .resource(mapToResourceResponse(booking.getResource()))
-                .user(mapToUserResponse(booking.getUser()))
+                .resource(booking.getResource() != null ? mapToResourceResponse(booking.getResource()) : null)
+                .user(booking.getUser() != null ? mapToUserResponse(booking.getUser()) : null)
                 .startTime(booking.getStartTime())
                 .endTime(booking.getEndTime())
                 .purpose(booking.getPurpose())

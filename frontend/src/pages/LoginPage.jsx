@@ -1,7 +1,7 @@
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useState } from 'react';
-import { login } from '../api/authApi';
+import { login, technicianBridge } from '../api/authApi';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -24,6 +24,22 @@ const LoginPage = () => {
     try {
       const res = await login(form);
       const { token, user } = res.data;
+
+      if (user.role === 'TECHNICIAN') {
+        try {
+          localStorage.setItem('token', token);
+          const bridgeRes = await technicianBridge();
+          const { token: techToken, technician } = bridgeRes.data;
+          localStorage.setItem('technician_token', techToken);
+          localStorage.setItem('technician_user', JSON.stringify(technician));
+          setAuth(user, token);
+          navigate('/technician/dashboard', { replace: true });
+          return;
+        } catch {
+          /* bridge failed — fall through to default dashboard */
+        }
+      }
+
       setAuth(user, token);
       navigate('/', { replace: true });
     } catch (err) {

@@ -79,7 +79,7 @@ public class TicketController {
             @PathVariable String id,
             @AuthenticationPrincipal UserPrincipal principal) {
 
-        ticketService.deleteTicket(id, principal.getUser().getId());
+        ticketService.deleteTicket(id, principal.getUser().getId(), principal.hasRole("ADMIN"));
         return ResponseEntity.noContent().build();
     }
 
