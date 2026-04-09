@@ -16,7 +16,7 @@ const TicketDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Comments
+  // Messages
   const [commentText, setCommentText] = useState('');
   const [editingComment, setEditingComment] = useState(null);
   const [editCommentText, setEditCommentText] = useState('');
@@ -178,32 +178,32 @@ const TicketDetailPage = () => {
 
       {/* Admin actions */}
       {isAdmin && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
-          <h3 className="font-semibold text-blue-900">Admin Actions</h3>
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3 dark:border-blue-800 dark:bg-blue-950/40">
+          <h3 className="font-semibold text-blue-900 dark:text-blue-200">Admin Actions</h3>
           <div className="flex flex-wrap gap-3">
             {allowedTransitions.length > 0 && (
               <div className="space-y-2">
-                <label className="text-sm font-medium">Update Status</label>
+                <label className="text-sm font-medium text-gray-800 dark:text-gray-100">Update Status</label>
                 <div className="flex gap-2">
-                  <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="rounded-lg border px-3 py-2 text-sm">
+                  <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="rounded-lg border px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
                     <option value="">Select status...</option>
                     {allowedTransitions.map(s => <option key={s} value={s}>{TICKET_STATUS[s]?.label || s}</option>)}
                   </select>
                   <button onClick={handleStatusUpdate} disabled={!newStatus || acting} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white disabled:opacity-50">Update</button>
                 </div>
                 {newStatus === 'RESOLVED' && (
-                  <textarea value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} placeholder="Resolution notes..." rows={2} className="w-full rounded-lg border px-3 py-2 text-sm" />
+                  <textarea value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} placeholder="Resolution notes..." rows={2} className="w-full rounded-lg border px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
                 )}
                 {newStatus === 'REJECTED' && (
-                  <textarea value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="Rejection reason (required)..." rows={2} className="w-full rounded-lg border px-3 py-2 text-sm" />
+                  <textarea value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="Rejection reason (required)..." rows={2} className="w-full rounded-lg border px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
                 )}
               </div>
             )}
             {canAssignNow && (
               <div className="space-y-2">
-                <label className="text-sm font-medium">Assign Technician</label>
+                <label className="text-sm font-medium text-gray-800 dark:text-gray-100">Assign Technician</label>
                 <div className="flex gap-2">
-                  <select value={selectedTech} onChange={(e) => setSelectedTech(e.target.value)} className="rounded-lg border px-3 py-2 text-sm">
+                  <select value={selectedTech} onChange={(e) => setSelectedTech(e.target.value)} className="rounded-lg border px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
                     <option value="">Select technician...</option>
                     {matchedTechnicians.map(t => {
                       const activeJobs = t.currentActiveJobs || 0;
@@ -218,7 +218,7 @@ const TicketDetailPage = () => {
                   <button onClick={handleAssign} disabled={!selectedTech || acting} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white disabled:opacity-50">Assign</button>
                 </div>
                 {matchedTechnicians.length === 0 && (
-                  <p className="text-xs text-amber-700">No active technicians available for this category.</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300">No active technicians available for this category.</p>
                 )}
               </div>
             )}
@@ -226,25 +226,25 @@ const TicketDetailPage = () => {
         </div>
       )}
 
-      {/* Comments */}
+      {/* Messages */}
       <div className="rounded-lg border p-4 space-y-3 dark:border-gray-700 dark:bg-gray-800">
-        <h3 className="font-semibold text-gray-700">Comments ({ticket.comments?.length || 0})</h3>
+        <h3 className="font-semibold text-gray-700 dark:text-gray-200">Messages ({ticket.comments?.length || 0})</h3>
         {ticket.comments?.length > 0 ? (
           <div className="space-y-3">
             {ticket.comments.map((c) => (
-              <div key={c.id} className="rounded-lg bg-gray-50 p-3">
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span className="font-medium text-gray-700">{c.user?.name || 'Unknown'}</span>
+              <div key={c.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900">
+                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                  <span className="font-medium text-gray-700 dark:text-gray-100">{c.user?.name || 'Unknown'}</span>
                   <span>{formatDate(c.createdAt)} {c.isEdited && '(edited)'}</span>
                 </div>
                 {editingComment === c.id ? (
                   <div className="mt-2 flex gap-2">
-                    <input value={editCommentText} onChange={(e) => setEditCommentText(e.target.value)} className="flex-1 rounded-lg border px-3 py-1.5 text-sm" />
+                    <input value={editCommentText} onChange={(e) => setEditCommentText(e.target.value)} className="flex-1 rounded-lg border px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" />
                     <button onClick={() => handleUpdateComment(c.id)} className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white">Save</button>
-                    <button onClick={() => setEditingComment(null)} className="rounded-lg border px-3 py-1.5 text-sm">Cancel</button>
+                    <button onClick={() => setEditingComment(null)} className="rounded-lg border px-3 py-1.5 text-sm dark:border-gray-600 dark:text-gray-200">Cancel</button>
                   </div>
                 ) : (
-                  <p className="mt-1 text-sm">{c.content}</p>
+                  <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">{c.content}</p>
                 )}
                 {(c.user?.id === user?.id || isAdmin) && editingComment !== c.id && (
                   <div className="mt-1 flex gap-2">
@@ -258,10 +258,10 @@ const TicketDetailPage = () => {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">No comments yet.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">No messages yet.</p>
         )}
         <form onSubmit={handleAddComment} className="flex gap-2">
-          <input value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Add a comment..." className="flex-1 rounded-lg border px-3 py-2 text-sm" />
+          <input value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Type a message..." className="flex-1 rounded-lg border px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
           <button type="submit" disabled={sendingComment || !commentText.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">
             <Send className="h-4 w-4" /> Send
           </button>
