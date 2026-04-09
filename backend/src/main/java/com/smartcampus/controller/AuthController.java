@@ -30,6 +30,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final JwtTokenProvider jwtTokenProvider;
+    private final com.smartcampus.repository.TechnicianRepository technicianRepository;
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<UserResponse>> signup(@Valid @RequestBody SignupRequest request) {
@@ -64,40 +65,46 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Logged out successfully. Please remove token on client side.", null));
     }
 
-    /**
-     * DEV ONLY - Creates a test user and returns a JWT token.
-     * Remove this endpoint before production/submission.
-     */
-    @PostMapping("/dev-login")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> devLogin(
-            @RequestParam(defaultValue = "ADMIN") String role) {
-        RoleName roleName = RoleName.valueOf(role.toUpperCase());
-        Role userRole = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new RuntimeException("Role not found: " + role));
+    @PostMapping("/technician-bridge")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> technicianBridge(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        User user = principal.getUser();
+        if (!user.getRole().getName().name().equals("TECHNICIAN")) {
+            throw new RuntimeException("Only TECHNICIAN role users can access the technician portal");
+        }
 
-        String email = "dev-" + role.toLowerCase() + "@smartcampus.test";
-        User user = userRepository.findByEmail(email)
-                .orElseGet(() -> userRepository.save(User.builder()
-                        .email(email)
-                        .name("Dev " + role.substring(0, 1).toUpperCase() + role.substring(1).toLowerCase())
-                        .oauthProviderId("dev-" + role.toLowerCase())
-                        .oauthProvider("dev")
-                        .role(userRole)
-                        .isActive(true)
-                        .isApproved(true)
-                        .build()));
+        String email = user.getEmail().trim().toLowerCase();
+        com.smartcampus.entity.Technician technician = technicianRepository.findByEmail(email)
+                .orElseGet(() -> technicianRepository.save(
+                        com.smartcampus.entity.Technician.builder()
+                                .username(email.split("@")[0])
+                                .passwordHash("")
+                                .fullName(user.getName())
+                                .email(email)
+                                .specialtyCategory(com.smartcampus.entity.enums.TicketCategory.OTHER)
+                                .available(true)
+                                .isActive(true)
+                                .currentActiveJobs(0)
+                                .build()
+                ));
 
-        UserPrincipal principal = new UserPrincipal(user, Map.of());
-        String token = jwtTokenProvider.generateToken(principal);
+        String techToken = jwtTokenProvider.generateTechnicianToken(technician);
 
-        return ResponseEntity.ok(ApiResponse.success("Dev login successful", Map.of(
-                "token", token,
-                "user", Map.of(
-                        "id", user.getId(),
-                        "email", user.getEmail(),
-                        "name", user.getName(),
-                        "role", roleName.name()
+        return ResponseEntity.ok(ApiResponse.success("Technician bridge successful", Map.of(
+                "token", techToken,
+                "technician", Map.of(
+                        "id", technician.getId(),
+                        "username", technician.getUsername(),
+                        "fullName", technician.getFullName(),
+                        "email", technician.getEmail(),
+                        "phone", technician.getPhone() != null ? technician.getPhone() : "",
+                        "specialtyCategory", technician.getSpecialtyCategory().name(),
+                        "available", technician.getAvailable(),
+                        "isActive", technician.getIsActive(),
+                        "currentActiveJobs", technician.getCurrentActiveJobs(),
+                        "yearsOfExperience", technician.getYearsOfExperience() != null ? technician.getYearsOfExperience() : 0
                 )
         )));
     }
+
 }
