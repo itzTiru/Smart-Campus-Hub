@@ -36,6 +36,7 @@ const ResourceDetailPage = () => {
     } finally { setLoading(false); }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchResource(); }, [id]);
 
   const handleUpdate = async (e) => {
@@ -127,7 +128,12 @@ const ResourceDetailPage = () => {
           </div>
           <div className="rounded-lg border p-4 space-y-2 dark:border-gray-700 dark:bg-gray-800">
             <h3 className="font-semibold text-gray-700 dark:text-gray-200">Quick Actions</h3>
-            <Link to={`/bookings/new?resourceId=${resource.id}`} className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">Book this Resource</Link>
+            {!isAdmin && (
+              <Link to={`/bookings/new?resourceId=${resource.id}`} className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">Book this Resource</Link>
+            )}
+            {isAdmin && (
+              <p className="text-sm text-gray-500 dark:text-gray-400">Use bookings management to review and process requests.</p>
+            )}
           </div>
         </div>
       )}

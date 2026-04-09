@@ -34,7 +34,6 @@ const AppRoutes = () => {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        {/* Protected routes with layout */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route index element={<RoleDashboardPage />} />
@@ -49,7 +48,6 @@ const AppRoutes = () => {
             <Route path="tickets/:id" element={<TicketDetailPage />} />
             <Route path="notifications/preferences" element={<NotificationPreferences />} />
 
-            {/* Admin routes */}
             <Route path="admin" element={<AdminRoute />}>
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<UserManagementPage />} />
@@ -57,13 +55,10 @@ const AppRoutes = () => {
           </Route>
         </Route>
 
-        {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/pending-approval" element={<PendingApprovalPage />} />
         <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
-
-        {/* Catch-all */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>

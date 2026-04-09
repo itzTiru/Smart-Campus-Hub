@@ -47,6 +47,7 @@ const TicketsPage = () => {
     } finally { setLoading(false); }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchTickets(); }, [page, statusFilter, priorityFilter, categoryFilter]);
 
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -99,9 +100,11 @@ const TicketsPage = () => {
               </button>
             </>
           )}
-          <Link to="/tickets/new" className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700">
-            <Plus className="h-4 w-4" /> New Ticket
-          </Link>
+          {!isAdmin && (
+            <Link to="/tickets/new" className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700">
+              <Plus className="h-4 w-4" /> New Ticket
+            </Link>
+          )}
         </div>
       </div>
 

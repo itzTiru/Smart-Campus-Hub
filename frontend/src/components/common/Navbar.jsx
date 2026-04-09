@@ -20,6 +20,7 @@ const Navbar = ({ onToggleSidebar }) => {
     getUnreadCount().then((res) => {
       setUnreadCount((res.data !== undefined ? res.data : res) || 0);
     }).catch(() => { /* ignore */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Close panel on outside click

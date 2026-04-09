@@ -25,6 +25,14 @@ public class Comment {
     @DocumentReference
     private User user;
 
+    private String actorType;
+
+    private String technicianId;
+
+    private String technicianName;
+
+    private String technicianEmail;
+
     private String content;
 
     @Builder.Default

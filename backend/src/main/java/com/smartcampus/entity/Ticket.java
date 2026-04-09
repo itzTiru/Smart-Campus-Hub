@@ -50,11 +50,17 @@ public class Ticket {
     @DocumentReference
     private User assignedTo;
 
+    private String assignedTechnicianId;
+
+    private String assignedTechnicianName;
+
     private String contactPhone;
 
     private String contactEmail;
 
     private String rejectionReason;
+
+    private String technicianDeclineReason;
 
     private String resolutionNotes;
 

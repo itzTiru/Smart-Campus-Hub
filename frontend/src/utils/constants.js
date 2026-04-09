@@ -7,6 +7,9 @@ export const BOOKING_STATUS = {
 
 export const TICKET_STATUS = {
   OPEN: { label: 'Open', color: 'blue', bgClass: 'bg-blue-100 text-blue-800' },
+  ASSIGNED: { label: 'Assigned', color: 'indigo', bgClass: 'bg-indigo-100 text-indigo-800' },
+  WORKING_ON: { label: 'Working On', color: 'amber', bgClass: 'bg-amber-100 text-amber-800' },
+  DECLINED: { label: 'Declined', color: 'rose', bgClass: 'bg-rose-100 text-rose-800' },
   IN_PROGRESS: { label: 'In Progress', color: 'yellow', bgClass: 'bg-yellow-100 text-yellow-800' },
   RESOLVED: { label: 'Resolved', color: 'green', bgClass: 'bg-green-100 text-green-800' },
   CLOSED: { label: 'Closed', color: 'gray', bgClass: 'bg-gray-100 text-gray-800' },

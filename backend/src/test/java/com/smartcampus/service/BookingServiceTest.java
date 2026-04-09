@@ -190,7 +190,7 @@ class BookingServiceTest {
         BookingReviewRequest reviewRequest = new BookingReviewRequest();
         reviewRequest.setRemarks("Approved for lab session");
 
-        BookingResponse response = bookingService.approveBooking("b1", reviewRequest, "u2");
+        bookingService.approveBooking("b1", reviewRequest, "u2");
 
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.APPROVED);
         verify(notificationService).sendNotification(eq("u1"), any(), any(), any(), any(), any());
@@ -206,7 +206,7 @@ class BookingServiceTest {
         BookingReviewRequest reviewRequest = new BookingReviewRequest();
         reviewRequest.setRemarks("Room under maintenance");
 
-        BookingResponse response = bookingService.rejectBooking("b1", reviewRequest, "u2");
+        bookingService.rejectBooking("b1", reviewRequest, "u2");
 
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.REJECTED);
         verify(notificationService).sendNotification(eq("u1"), any(), any(), any(), any(), any());

@@ -130,15 +130,13 @@ const LoginPage = () => {
             Sign in with Google
           </a>
 
-          <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                   <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
             Don&apos;t have an account?{' '}
             <Link to="/signup" className="font-semibold text-blue-600 hover:text-blue-700">
               Create one
             </Link>
           </p>
         </div>
-
-       
       </div>
     </div>
   );

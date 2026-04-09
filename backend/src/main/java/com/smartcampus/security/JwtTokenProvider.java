@@ -1,5 +1,6 @@
 package com.smartcampus.security;
 
+import com.smartcampus.entity.Technician;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +28,23 @@ public class JwtTokenProvider {
                 .claim("email", principal.getUser().getEmail())
                 .claim("name", principal.getUser().getName())
                 .claim("role", principal.getUser().getRole().getName().name())
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    public String generateTechnicianToken(Technician technician) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+
+        return Jwts.builder()
+                .subject("TECH:" + technician.getId())
+                .claim("email", technician.getEmail())
+                .claim("name", technician.getFullName())
+                .claim("username", technician.getUsername())
+                .claim("role", "TECHNICIAN")
+                .claim("actorType", "TECHNICIAN")
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey())

@@ -6,11 +6,11 @@ import com.smartcampus.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -22,10 +22,13 @@ public class DataInitializer implements CommandLineRunner {
     private final ResourceRepository resourceRepository;
     private final BookingRepository bookingRepository;
     private final TicketRepository ticketRepository;
+    private final TechnicianRepository technicianRepository;
     private final CommentRepository commentRepository;
     private final NotificationRepository notificationRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
+    @SuppressWarnings("unused")
     public void run(String... args) {
         // Seed roles
         for (RoleName roleName : RoleName.values()) {
@@ -38,9 +41,12 @@ public class DataInitializer implements CommandLineRunner {
             }
         }
 
-        // Only seed data if DB is empty (no users besides dev accounts)
+        // Ensure standalone technician accounts exist even when core seed data already exists.
+        ensureDefaultTechnicians();
+
+        // Only seed large dataset if DB is empty (no users besides dev accounts)
         if (userRepository.count() > 3) {
-            log.info("Data already seeded, skipping.");
+            log.info("Core data already seeded, skipping large dataset.");
             return;
         }
 
@@ -285,6 +291,31 @@ public class DataInitializer implements CommandLineRunner {
                         .email(email).name(name)
                         .oauthProviderId(providerId).oauthProvider("google")
                         .role(role).isActive(true).isApproved(true).build()));
+    }
+
+    private Technician saveTechnician(String username, String rawPassword, String fullName, String email, String phone,
+                                      TicketCategory category, Integer yearsOfExperience, String notes) {
+        return technicianRepository.findByUsername(username).orElseGet(() ->
+                technicianRepository.save(Technician.builder()
+                        .username(username)
+                        .passwordHash(passwordEncoder.encode(rawPassword))
+                        .fullName(fullName)
+                        .email(email)
+                        .phone(phone)
+                        .specialtyCategory(category)
+                        .yearsOfExperience(yearsOfExperience)
+                        .notes(notes)
+                        .available(true)
+                        .isActive(true)
+                        .currentActiveJobs(0)
+                        .build()));
+    }
+
+    private void ensureDefaultTechnicians() {
+        saveTechnician("nimal.tech", "Tech@12345", "Nimal Silva", "nimal.tech@sliit.lk", "+94771234001",
+                TicketCategory.ELECTRICAL, 4, "Handles electrical and IT equipment issues");
+        saveTechnician("suresh.tech", "Tech@12345", "Suresh Fernando", "suresh.tech@sliit.lk", "+94771234002",
+                TicketCategory.HVAC, 6, "Handles HVAC and infrastructure issues");
     }
 
     private Resource saveResource(String name, ResourceType type, Integer capacity,
