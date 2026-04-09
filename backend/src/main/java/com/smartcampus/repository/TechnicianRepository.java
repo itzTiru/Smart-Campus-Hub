@@ -17,5 +17,7 @@ public interface TechnicianRepository extends MongoRepository<Technician, String
 
     boolean existsByEmail(String email);
 
+    Optional<Technician> findByEmail(String email);
+
     List<Technician> findBySpecialtyCategoryAndAvailableTrueAndIsActiveTrue(TicketCategory specialtyCategory);
 }

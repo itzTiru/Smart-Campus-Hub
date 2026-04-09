@@ -42,3 +42,8 @@ export const toggleUserStatus = async (id) => {
   const response = await api.patch(`/admin/users/${id}/status`);
   return response.data;
 };
+
+export const technicianBridge = async () => {
+  const response = await api.post('/auth/technician-bridge');
+  return response.data;
+};
