@@ -9,6 +9,9 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.Optional;
+
 @Repository
 public interface TicketRepository extends MongoRepository<Ticket, String> {
 
@@ -19,6 +22,14 @@ public interface TicketRepository extends MongoRepository<Ticket, String> {
     Page<Ticket> findByAssignedToId(ObjectId technicianId, Pageable pageable);
 
     Page<Ticket> findByStatus(TicketStatus status, Pageable pageable);
+
+    long countByAssignedTechnicianIdAndStatusIn(String assignedTechnicianId, List<TicketStatus> statuses);
+
+    Page<Ticket> findByAssignedTechnicianId(String assignedTechnicianId, Pageable pageable);
+
+    Page<Ticket> findByAssignedTechnicianIdAndStatus(String assignedTechnicianId, TicketStatus status, Pageable pageable);
+
+    Optional<Ticket> findByIdAndAssignedTechnicianId(String id, String assignedTechnicianId);
 
     @Query(value = "{'resource': ?0}", count = true)
     long countByResourceId(ObjectId resourceId);
