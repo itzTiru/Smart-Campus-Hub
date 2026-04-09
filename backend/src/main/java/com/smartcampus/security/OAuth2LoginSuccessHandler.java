@@ -20,16 +20,36 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     @Value("${app.oauth2.redirect-uri}")
     private String redirectUri;
 
+    @Value("${app.oauth2.pending-redirect-uri}")
+    private String pendingRedirectUri;
+
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException {
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        Object authPrincipal = authentication.getPrincipal();
+
+        if (!(authPrincipal instanceof UserPrincipal principal)) {
+            getRedirectStrategy().sendRedirect(request, response, "/login?error");
+            return;
+        }
+
+        if (!Boolean.TRUE.equals(principal.getUser().getIsApproved())) {
+            String pendingUrl = UriComponentsBuilder.fromUriString(pendingRedirectUri)
+                    .queryParam("email", principal.getUser().getEmail())
+                    .build()
+                    .toUriString();
+
+            getRedirectStrategy().sendRedirect(request, response, pendingUrl);
+            return;
+        }
+
         String token = tokenProvider.generateToken(principal);
 
         String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("token", token)
-                .build().toUriString();
+                .build()
+                .toUriString();
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }

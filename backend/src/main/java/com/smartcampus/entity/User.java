@@ -26,6 +26,10 @@ public class User {
 
     private String avatarUrl;
 
+    private String passwordHash;
+
+    private Boolean isApproved;
+
     @Builder.Default
     private String oauthProvider = "google";
 

@@ -4,14 +4,15 @@ import com.smartcampus.entity.User;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 
 @Getter
-public class UserPrincipal implements OAuth2User {
+public class UserPrincipal implements OidcUser {
 
     private final User user;
     private final Map<String, Object> attributes;
@@ -36,6 +37,21 @@ public class UserPrincipal implements OAuth2User {
     @Override
     public Map<String, Object> getAttributes() {
         return attributes;
+    }
+
+    @Override
+    public Map<String, Object> getClaims() {
+        return attributes;
+    }
+
+    @Override
+    public OidcIdToken getIdToken() {
+        return null;
+    }
+
+    @Override
+    public org.springframework.security.oauth2.core.oidc.OidcUserInfo getUserInfo() {
+        return null;
     }
 
     public boolean hasRole(String role) {

@@ -1,24 +1,36 @@
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import api from '../api/axiosConfig';
 import { useState } from 'react';
+import { login } from '../api/authApi';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 const LoginPage = () => {
+  const navigate = useNavigate();
   const { isAuthenticated, isLoading, setAuth } = useAuthStore();
-  const [devLoading, setDevLoading] = useState(false);
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleDevLogin = async (role) => {
-    setDevLoading(true);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
     try {
-      const res = await api.post(`/auth/dev-login?role=${role}`);
-      const { token, user } = res.data.data;
+      const res = await login(form);
+      const { token, user } = res.data;
       setAuth(user, token);
+      navigate('/', { replace: true });
     } catch (err) {
-      console.error('Dev login failed:', err);
+      setError(err.response?.data?.message || 'Login failed');
+    } finally {
+      setSubmitting(false);
     }
-    setDevLoading(false);
   };
 
   if (isLoading) {
@@ -34,24 +46,80 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-4 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-900">
       <div className="w-full max-w-md">
-        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm text-center dark:bg-gray-800 dark:border-gray-700">
-          {/* Logo / Title */}
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-lg">
-            SC
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="mb-6 text-center">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-lg">
+              SC
+            </div>
+            <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Smart Campus Hub
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Log in with your email and password, or continue with Google.
+            </p>
           </div>
-          <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Smart Campus Hub
-          </h1>
-          <p className="mb-8 text-gray-500 dark:text-gray-400">
-            Sign in to manage campus resources, bookings, and maintenance
-          </p>
 
-          {/* Google Sign-In */}
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div>
+              <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                placeholder="Enter your email"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={handleChange}
+                required
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                placeholder="Enter your password"
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
+
+          <div className="my-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+            <span className="text-xs font-medium uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
+              Or
+            </span>
+            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+          </div>
+
           <a
             href={`${API_BASE}/oauth2/authorization/google`}
-            className="inline-flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600"
+            className="inline-flex w-full items-center justify-center gap-3 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
@@ -61,33 +129,14 @@ const LoginPage = () => {
             </svg>
             Sign in with Google
           </a>
-        </div>
 
-        {/* Dev login buttons - remove before submission */}
-        <div className="mt-4 rounded-xl border border-dashed border-yellow-400 bg-yellow-50 p-4 dark:bg-yellow-900/20 dark:border-yellow-600">
-          <p className="mb-3 text-xs font-semibold text-yellow-700 dark:text-yellow-400">DEV LOGIN (Testing Only)</p>
-          <div className="flex gap-2">
-            <button onClick={() => handleDevLogin('ADMIN')} disabled={devLoading}
-              className="flex-1 rounded-lg bg-purple-600 px-3 py-2 text-xs font-medium text-white hover:bg-purple-700 disabled:opacity-50">
-              Admin
-            </button>
-            <button onClick={() => handleDevLogin('USER')} disabled={devLoading}
-              className="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-              User
-            </button>
-            <button onClick={() => handleDevLogin('TECHNICIAN')} disabled={devLoading}
-              className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50">
-              Technician
-            </button>
-          </div>
+                   <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+            Don&apos;t have an account?{' '}
+            <Link to="/signup" className="font-semibold text-blue-600 hover:text-blue-700">
+              Create one
+            </Link>
+          </p>
         </div>
-
-        <p className="mt-6 text-center text-xs text-gray-400 dark:text-gray-500">
-          Use your university Google account to sign in
-        </p>
-        <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
-          Technician: <a href="/technician/login" className="text-blue-600 hover:underline">Login</a> or <a href="/technician/register" className="text-blue-600 hover:underline">Register</a>
-        </p>
       </div>
     </div>
   );

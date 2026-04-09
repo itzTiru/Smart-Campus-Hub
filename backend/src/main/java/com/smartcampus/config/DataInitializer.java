@@ -290,7 +290,7 @@ public class DataInitializer implements CommandLineRunner {
                 userRepository.save(User.builder()
                         .email(email).name(name)
                         .oauthProviderId(providerId).oauthProvider("google")
-                        .role(role).isActive(true).build()));
+                        .role(role).isActive(true).isApproved(true).build()));
     }
 
     private Technician saveTechnician(String username, String rawPassword, String fullName, String email, String phone,

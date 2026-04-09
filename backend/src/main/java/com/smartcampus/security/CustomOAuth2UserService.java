@@ -45,14 +45,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     Role defaultRole = roleRepository.findByName(RoleName.USER)
                             .orElseThrow(() -> new RuntimeException("Default role USER not found"));
                     User newUser = User.builder()
-                            .email(email)
-                            .name(name)
-                            .oauthProviderId(providerId)
-                            .avatarUrl(avatar)
-                            .oauthProvider("google")
-                            .role(defaultRole)
-                            .isActive(true)
-                            .build();
+        .email(email)
+        .name(name)
+        .oauthProviderId(providerId)
+        .avatarUrl(avatar)
+        .oauthProvider("google")
+        .role(defaultRole)
+        .isActive(true)
+        .isApproved(false)
+        .build();
                     return userRepository.save(newUser);
                 });
 

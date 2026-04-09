@@ -39,4 +39,10 @@ public class AdminController {
         UserResponse user = userService.toggleUserStatus(id);
         return ResponseEntity.ok(ApiResponse.success("User status toggled successfully", user));
     }
+
+    @PatchMapping("/users/{id}/approve")
+    public ResponseEntity<ApiResponse<UserResponse>> approveUser(@PathVariable String id) {
+        UserResponse user = userService.approveUser(id);
+        return ResponseEntity.ok(ApiResponse.success("User approved successfully", user));
+    }
 }
