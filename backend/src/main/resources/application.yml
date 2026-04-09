@@ -2,9 +2,14 @@ spring:
   application:
     name: smart-campus-api
 
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:backend/.env[.properties]
+
   data:
     mongodb:
-      uri: mongodb+srv://tishanyasiru:123456799Password@cluster0.pxbn96g.mongodb.net/smart_campus?retryWrites=true&w=majority&appName=Cluster0&tlsAllowInvalidCertificates=true
+      uri: ${MONGODB_URI}
 
   servlet:
     multipart:
@@ -17,8 +22,8 @@ spring:
       client:
         registration:
           google:
-            client-id: 895472288021-i4d0p177hkq99j8afbihnfslh4u51cm7.apps.googleusercontent.com
-            client-secret: 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
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
             scope:
               - openid
               - profile
@@ -30,7 +35,7 @@ server:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:SmartCampusSecretKeyThatIsAtLeast256BitsLongForHS256AlgorithmSecurity2026}
+    secret: ${JWT_SECRET}
     expiration-ms: 86400000
   oauth2:
     redirect-uri: http://localhost:5173/oauth2/redirect
