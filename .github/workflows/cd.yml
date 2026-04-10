@@ -54,7 +54,7 @@ jobs:
           region: ${{ secrets.GCP_REGION }}
           flags: '--allow-unauthenticated --port 8080'
           env_vars: |
-            SPRING_DATA_MONGODB_URI=${{ secrets.MONGODB_URI }}
+            MONGODB_URI=${{ secrets.MONGODB_URI }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
             GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
