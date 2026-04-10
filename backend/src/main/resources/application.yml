@@ -34,12 +34,13 @@ server:
   port: 8080
 
 app:
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
   jwt:
     secret: ${JWT_SECRET}
     expiration-ms: 86400000
   oauth2:
-    redirect-uri: http://localhost:5173/oauth2/redirect
-    pending-redirect-uri: http://localhost:5173/pending-approval
+    redirect-uri: ${app.frontend-url}/oauth2/redirect
+    pending-redirect-uri: ${app.frontend-url}/pending-approval
   file:
     upload-dir: ./uploads
     max-attachments-per-ticket: 3

@@ -23,6 +23,7 @@ import com.smartcampus.repository.UserRepository;
 import com.smartcampus.service.BookingService;
 import com.smartcampus.service.NotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -47,6 +48,9 @@ public class BookingServiceImpl implements BookingService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final MongoTemplate mongoTemplate;
+
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
     @Override
     public BookingResponse createBooking(BookingRequest request, String userId) {
@@ -287,7 +291,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         // Generate QR code check-in URL on approval
-        String qrCodeUrl = "http://localhost:5173/bookings/" + booking.getId() + "/checkin";
+        String qrCodeUrl = frontendUrl + "/bookings/" + booking.getId() + "/checkin";
         booking.setQrCode(qrCodeUrl);
 
         Booking updated = bookingRepository.save(booking);
@@ -367,7 +371,7 @@ public class BookingServiceImpl implements BookingService {
 
         if (booking.getQrCode() == null) {
             // Generate if missing (e.g., bookings approved before this feature)
-            String qrCodeUrl = "http://localhost:5173/bookings/" + booking.getId() + "/checkin";
+            String qrCodeUrl = frontendUrl + "/bookings/" + booking.getId() + "/checkin";
             booking.setQrCode(qrCodeUrl);
             bookingRepository.save(booking);
         }
