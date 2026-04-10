@@ -55,7 +55,7 @@ const BookingDetailPage = () => {
   const formatDate = (dt) => dt ? new Date(dt).toLocaleString() : '—';
   const formatTime = (dt) => dt ? new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
 
-  const qrUrl = booking?.qrCodeUrl || `http://localhost:5173/bookings/${id}/checkin`;
+  const qrUrl = booking?.qrCodeUrl || `${window.location.origin}/bookings/${id}/checkin`;
 
   const handleDownloadPass = () => {
     const canvas = document.getElementById('qr-canvas');

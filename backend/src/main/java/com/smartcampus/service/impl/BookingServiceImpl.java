@@ -22,7 +22,6 @@ import com.smartcampus.repository.ResourceRepository;
 import com.smartcampus.repository.UserRepository;
 import com.smartcampus.service.BookingService;
 import com.smartcampus.service.NotificationService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -40,7 +39,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
@@ -48,9 +46,21 @@ public class BookingServiceImpl implements BookingService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final MongoTemplate mongoTemplate;
+    private final String frontendUrl;
 
-    @Value("${app.frontend-url}")
-    private String frontendUrl;
+    public BookingServiceImpl(BookingRepository bookingRepository,
+                              ResourceRepository resourceRepository,
+                              UserRepository userRepository,
+                              NotificationService notificationService,
+                              MongoTemplate mongoTemplate,
+                              @Value("${app.frontend-url}") String frontendUrl) {
+        this.bookingRepository = bookingRepository;
+        this.resourceRepository = resourceRepository;
+        this.userRepository = userRepository;
+        this.notificationService = notificationService;
+        this.mongoTemplate = mongoTemplate;
+        this.frontendUrl = frontendUrl;
+    }
 
     @Override
     public BookingResponse createBooking(BookingRequest request, String userId) {

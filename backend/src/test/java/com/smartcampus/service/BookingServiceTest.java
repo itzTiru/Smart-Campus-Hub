@@ -20,11 +20,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -44,7 +42,6 @@ class BookingServiceTest {
     @Mock private NotificationService notificationService;
     @Mock private MongoTemplate mongoTemplate;
 
-    @InjectMocks
     private BookingServiceImpl bookingService;
 
     private static final String RES_ID = "aaaaaaaaaaaaaaaaaaaaaaaa";
@@ -62,7 +59,9 @@ class BookingServiceTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(bookingService, "frontendUrl", "http://localhost:5173");
+        bookingService = new BookingServiceImpl(
+                bookingRepository, resourceRepository, userRepository,
+                notificationService, mongoTemplate, "http://localhost:5173");
         userRole = Role.builder().id("r1").name(RoleName.USER).build();
         adminRole = Role.builder().id("r2").name(RoleName.ADMIN).build();
 
