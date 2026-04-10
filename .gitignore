@@ -32,6 +32,9 @@ logs/
 backend/uploads/*
 !backend/uploads/.gitkeep
 
+# GCP Keys
+gcp-key.json
+
 # Environment
 .env
 .env.local
