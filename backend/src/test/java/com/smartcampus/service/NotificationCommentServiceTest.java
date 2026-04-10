@@ -36,6 +36,7 @@ class NotificationCommentServiceTest {
     // ── Notification Service Tests ────────────────────────────────
 
     @Mock private NotificationRepository notificationRepository;
+    @Mock private NotificationPreferenceRepository notificationPreferenceRepository;
     @Mock private UserRepository userRepository;
     @Mock private SimpMessagingTemplate messagingTemplate;
     @Mock private MongoTemplate mongoTemplate;
