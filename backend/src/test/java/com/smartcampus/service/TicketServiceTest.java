@@ -34,6 +34,7 @@ class TicketServiceTest {
     @Mock private CommentRepository commentRepository;
     @Mock private ResourceRepository resourceRepository;
     @Mock private UserRepository userRepository;
+    @Mock private TechnicianRepository technicianRepository;
     @Mock private FileStorageService fileStorageService;
     @Mock private NotificationService notificationService;
     @Mock private MongoTemplate mongoTemplate;
@@ -158,10 +159,10 @@ class TicketServiceTest {
     }
 
     @Test
-    @DisplayName("Should transition status from OPEN to IN_PROGRESS")
-    void updateStatus_OpenToInProgress() {
+    @DisplayName("Should transition status from OPEN to ASSIGNED")
+    void updateStatus_OpenToAssigned() {
         TicketStatusUpdateRequest statusReq = new TicketStatusUpdateRequest();
-        statusReq.setStatus(TicketStatus.IN_PROGRESS);
+        statusReq.setStatus(TicketStatus.ASSIGNED);
 
         when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
         when(ticketRepository.save(any(Ticket.class))).thenReturn(ticket);
@@ -170,7 +171,7 @@ class TicketServiceTest {
 
         ticketService.updateTicketStatus("t1", statusReq, "u2");
 
-        assertThat(ticket.getStatus()).isEqualTo(TicketStatus.IN_PROGRESS);
+        assertThat(ticket.getStatus()).isEqualTo(TicketStatus.ASSIGNED);
         verify(notificationService).sendNotification(eq("u1"), any(), any(), any(), any(), any());
     }
 
@@ -190,17 +191,23 @@ class TicketServiceTest {
     @Test
     @DisplayName("Should assign technician to ticket")
     void assignTicket_Success() {
+        Technician tech = Technician.builder()
+                .id("tech1").fullName("Technician One").email("tech@test.com")
+                .specialtyCategory(TicketCategory.IT_EQUIPMENT).isActive(true)
+                .currentActiveJobs(0).build();
+
         when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
-        when(userRepository.findById("u2")).thenReturn(Optional.of(technician));
+        when(technicianRepository.findById("tech1")).thenReturn(Optional.of(tech));
+        when(ticketRepository.countByAssignedTechnicianIdAndStatusIn(any(), any())).thenReturn(0L);
         when(ticketRepository.save(any(Ticket.class))).thenReturn(ticket);
         when(ticketAttachmentRepository.findByTicketId("t1")).thenReturn(Collections.emptyList());
         when(commentRepository.findByTicketIdOrderByCreatedAtAsc("t1")).thenReturn(Collections.emptyList());
 
-        ticketService.assignTicket("t1", "u2", "u99");
+        ticketService.assignTicket("t1", "tech1", "u99");
 
-        assertThat(ticket.getAssignedTo()).isEqualTo(technician);
-        assertThat(ticket.getStatus()).isEqualTo(TicketStatus.IN_PROGRESS);
-        verify(notificationService, times(2)).sendNotification(anyString(), any(), any(), any(), any(), any());
+        assertThat(ticket.getAssignedTechnicianId()).isEqualTo("tech1");
+        assertThat(ticket.getStatus()).isEqualTo(TicketStatus.ASSIGNED);
+        verify(notificationService).sendNotification(eq("u1"), any(), any(), any(), any(), any());
     }
 
     @Test

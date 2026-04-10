@@ -9,13 +9,11 @@ import ManagerDashboard from './ManagerDashboard';
 const RoleDashboardPage = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
-  const [redirecting, setRedirecting] = useState(user?.role === 'TECHNICIAN');
+  const isTechnician = user?.role === 'TECHNICIAN';
+  const [redirecting, setRedirecting] = useState(isTechnician);
 
   useEffect(() => {
-    if (user?.role !== 'TECHNICIAN') {
-      setRedirecting(false);
-      return;
-    }
+    if (!isTechnician) return;
 
     const techToken = localStorage.getItem('technician_token');
     if (techToken) {
@@ -30,7 +28,7 @@ const RoleDashboardPage = () => {
         })
         .catch(() => setRedirecting(false));
     }
-  }, [user?.role, navigate]);
+  }, [isTechnician, navigate]);
 
   if (redirecting) {
     return (
